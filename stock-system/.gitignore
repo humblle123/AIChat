@@ -34,3 +34,6 @@ docker-compose.override.yml
 # 临时文件
 *.tmp
 *.log
+*.db-shm
+*.db-wal
+*.bak
