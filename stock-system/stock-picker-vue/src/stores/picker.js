@@ -25,6 +25,53 @@ export const usePickerStore = defineStore('picker', () => {
   const loadingDetail = ref(false);
   const error = ref('');
 
+  // ---- 自选股 ----
+  const watchlistCodes = ref([]);
+  const loadingWatchlist = ref(false);
+
+  function restoreWatchlist() {
+    try {
+      const raw = localStorage.getItem('watchlist_codes');
+      if (raw) watchlistCodes.value = JSON.parse(raw);
+    } catch {
+      watchlistCodes.value = [];
+    }
+  }
+
+  function persistWatchlist() {
+    localStorage.setItem('watchlist_codes', JSON.stringify(watchlistCodes.value));
+  }
+
+  function isFavorited(code) {
+    return watchlistCodes.value.includes(code);
+  }
+
+  async function loadWatchlist() {
+    loadingWatchlist.value = true;
+    try {
+      const data = await api.watchlist.list();
+      watchlistCodes.value = (data || []).map((i) => i.code);
+      persistWatchlist();
+    } catch {
+      restoreWatchlist();
+    } finally {
+      loadingWatchlist.value = false;
+    }
+  }
+
+  async function toggleWatchlist(code) {
+    if (!code) return;
+    const idx = watchlistCodes.value.indexOf(code);
+    if (idx >= 0) {
+      watchlistCodes.value.splice(idx, 1);
+      try { await api.watchlist.remove(code); } catch { /* offline ok */ }
+    } else {
+      watchlistCodes.value.push(code);
+      try { await api.watchlist.add(code); } catch { /* offline ok */ }
+    }
+    persistWatchlist();
+  }
+
   const activeTemplate = computed(() => templates.value.find((item) => item.id === activeTemplateId.value) || null);
 
   const summaryMap = computed(() => {
@@ -186,6 +233,8 @@ export const usePickerStore = defineStore('picker', () => {
   }
 
   async function boot() {
+    restoreWatchlist();
+    loadWatchlist();
     await loadTemplates();
     if (activeTemplateId.value) {
       await loadResults(activeTemplateId.value, 1);
@@ -234,5 +283,11 @@ export const usePickerStore = defineStore('picker', () => {
     refreshCurrent,
     goPage,
     selectRelative,
+    // 自选股
+    watchlistCodes,
+    loadingWatchlist,
+    isFavorited,
+    toggleWatchlist,
+    loadWatchlist,
   };
 });

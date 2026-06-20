@@ -491,6 +491,20 @@ def init_db():
             "ON template_screen_cache(template_id, date, rps50)"
         )
 
+        # 自选股表
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS stock_watchlist (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                code TEXT NOT NULL,
+                note TEXT DEFAULT '',
+                added_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(code)
+            )
+        """)
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_watchlist_code ON stock_watchlist(code)"
+        )
+
         # 集中式 schema 迁移(替代 alembic,适合 1-2 个表的轻量场景)
         # 新增字段时,在这里加一行即可,启动时幂等执行
         _apply_pending_migrations(cursor)
@@ -1323,6 +1337,46 @@ def delete_formula(formula_id: int) -> bool:
     with get_cursor() as cursor:
         cursor.execute("DELETE FROM formulas WHERE id = ?", (formula_id,))
         return cursor.rowcount > 0
+
+
+# ====== 自选股管理 ======
+
+def get_watchlist() -> List[Dict]:
+    """获取自选股列表（含当前行情快照）。"""
+    with get_cursor() as cursor:
+        cursor.execute("""
+            SELECT w.code, sb.name, sb.market, sb.industry,
+                   q.price, q.change_pct, q.total_mv
+            FROM stock_watchlist w
+            LEFT JOIN stock_basic sb ON sb.code = w.code
+            LEFT JOIN stock_quote_snapshot q ON q.code = w.code
+            ORDER BY w.added_at DESC
+        """)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+
+
+def add_to_watchlist(code: str) -> bool:
+    """加入自选。已存在则忽略。"""
+    with get_cursor() as cursor:
+        cursor.execute("""
+            INSERT OR IGNORE INTO stock_watchlist (code) VALUES (?)
+        """, (code,))
+        return cursor.rowcount > 0
+
+
+def remove_from_watchlist(code: str) -> bool:
+    """移除自选。"""
+    with get_cursor() as cursor:
+        cursor.execute("DELETE FROM stock_watchlist WHERE code = ?", (code,))
+        return cursor.rowcount > 0
+
+
+def is_in_watchlist(code: str) -> bool:
+    """检查股票是否已收藏。"""
+    with get_cursor() as cursor:
+        cursor.execute("SELECT 1 FROM stock_watchlist WHERE code = ?", (code,))
+        return cursor.fetchone() is not None
 
 
 # ====== 选股结果管理 ======

@@ -11,6 +11,7 @@ from api.schemas import (
     StockDetailFundamentals, StockDetailTechnicals, StockDetailKLineSummary,
     StockTemplateHit,
     FormulaValidateRequest, FormulaValidateResponse,
+    WatchlistAddRequest, WatchlistItem, WatchlistCheckResponse,
 )
 from strategies import list_strategies
 from engine import ScreeningEngine
@@ -20,7 +21,8 @@ from data.store import (
     update_formula, delete_formula, get_screen_history,
     get_latest_screen_results, save_screen_result,
     get_formula_templates, get_formula_template_by_id,
-    get_template_screen_summary
+    get_template_screen_summary,
+    get_watchlist, add_to_watchlist, remove_from_watchlist, is_in_watchlist,
 )
 from formula_engine import validate as validate_formula, evaluate_formula, FormulaError
 from config import STRATEGY_DEFAULTS
@@ -60,6 +62,47 @@ async def health_ready():
     checks['template_cached_count'] = len(summaries)
     ok = 'db_error' not in checks and checks.get('stock_basic_count', 0) > 0
     return {'status': 'ready' if ok else 'not_ready', **checks}
+
+
+# ====== 自选股 API ======
+
+@router.get('/watchlist', response_model=List[WatchlistItem], tags=['watchlist'])
+async def list_watchlist():
+    """获取自选股列表。"""
+    return [
+        WatchlistItem(
+            code=item['code'],
+            name=item.get('name', ''),
+            market=item.get('market', ''),
+            industry=item.get('industry', ''),
+            price=item.get('price'),
+            change_pct=item.get('change_pct'),
+            total_mv=item.get('total_mv'),
+        )
+        for item in get_watchlist()
+    ]
+
+
+@router.post('/watchlist', tags=['watchlist'])
+async def add_watchlist(request: WatchlistAddRequest):
+    """加入自选。"""
+    ok = add_to_watchlist(request.code)
+    return {'code': request.code, 'added': ok}
+
+
+@router.delete('/watchlist/{code}', tags=['watchlist'])
+async def remove_watchlist(code: str):
+    """移除自选。"""
+    ok = remove_from_watchlist(code)
+    if not ok:
+        raise HTTPException(status_code=404, detail='该股票不在自选列表中')
+    return {'code': code, 'removed': True}
+
+
+@router.get('/watchlist/{code}', response_model=WatchlistCheckResponse, tags=['watchlist'])
+async def check_watchlist(code: str):
+    """检查股票是否已收藏。"""
+    return WatchlistCheckResponse(favorited=is_in_watchlist(code))
 
 
 # ====== 公式管理 API ======

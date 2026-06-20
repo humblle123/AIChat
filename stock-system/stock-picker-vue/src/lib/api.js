@@ -30,4 +30,10 @@ export const api = {
   stockDetail: (code) => request(`/stocks/${encodeURIComponent(code)}`),
   kline: (code, period = 'day', signal) =>
     request(`/kline/${encodeURIComponent(code)}?period=${encodeURIComponent(period)}`, { signal }),
+  watchlist: {
+    list: () => request('/watchlist'),
+    add: (code) => request('/watchlist', { method: 'POST', body: JSON.stringify({ code }) }),
+    remove: (code) => request(`/watchlist/${encodeURIComponent(code)}`, { method: 'DELETE' }),
+    check: (code) => request(`/watchlist/${encodeURIComponent(code)}`),
+  },
 };

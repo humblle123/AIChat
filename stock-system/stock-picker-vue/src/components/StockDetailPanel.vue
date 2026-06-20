@@ -14,7 +14,16 @@
       <div class="rounded-3xl border border-white/8 bg-white/5 p-4">
         <div class="flex items-start justify-between gap-3">
           <div>
-            <h3 class="text-2xl font-semibold text-slate-50">{{ detail.basic.name }}</h3>
+            <div class="flex items-center gap-2">
+              <h3 class="text-2xl font-semibold text-slate-50">{{ detail.basic.name }}</h3>
+              <button
+                class="watchlist-btn"
+                :class="{ active: store.isFavorited(detail.basic.code) }"
+                @click="store.toggleWatchlist(detail.basic.code)"
+              >
+                {{ store.isFavorited(detail.basic.code) ? '★ 已自选' : '☆ 加自选' }}
+              </button>
+            </div>
             <p class="mt-1 font-mono text-sm text-slate-400">{{ detail.basic.code }} · {{ detail.basic.industry }}</p>
           </div>
           <div class="text-right">
@@ -76,6 +85,9 @@
 
 <script setup>
 import KlineChart from './KlineChart.vue';
+import { usePickerStore } from '../stores/picker';
+
+const store = usePickerStore();
 
 const props = defineProps({
   detail: { type: Object, default: null },

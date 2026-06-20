@@ -331,11 +331,35 @@ class FormulaValidateResponse(BaseModel):
     normalized_formula: str = ''
 
 
+# ====== 自选股 ======
+
+class WatchlistAddRequest(BaseModel):
+    """加入自选请求"""
+    code: str
+
+
+class WatchlistItem(BaseModel):
+    """自选股条目"""
+    code: str
+    name: str = ''
+    market: str = ''
+    industry: str = ''
+    price: Optional[float] = None
+    change_pct: Optional[float] = None
+    total_mv: Optional[float] = None
+
+
+class WatchlistCheckResponse(BaseModel):
+    """自选检查响应"""
+    favorited: bool
+
+
 # ====== OpenAPI 元数据 ======
 
 API_TAGS_METADATA = [
     {'name': 'templates', 'description': '内置公式模板(b1/s2/s3/kd1)与公式校验。'},
     {'name': 'search', 'description': '股票搜索 / 模板结果 / 摘要。'},
     {'name': 'detail', 'description': '股票详情与 K 线。'},
+    {'name': 'watchlist', 'description': '自选股管理。'},
     {'name': 'health', 'description': '健康检查与 K8s 探针。'},
 ]

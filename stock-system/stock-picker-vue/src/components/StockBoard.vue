@@ -4,6 +4,7 @@
       <table class="stock-table">
         <thead>
           <tr>
+            <th style="width:28px"></th>
             <th style="width:40px">#</th>
             <th class="sortable" @click="toggleSort('code')">
               代码 <span class="sort-arrow">{{ sortArrow('code') }}</span>
@@ -39,6 +40,11 @@
             :class="{ selected: item.code === selectedCode }"
             @click="$emit('select', item.code)"
           >
+            <td class="td-fav" @click.stop="store.toggleWatchlist(item.code)">
+              <span class="fav-star" :class="{ active: store.isFavorited(item.code) }">
+                {{ store.isFavorited(item.code) ? '★' : '☆' }}
+              </span>
+            </td>
             <td class="td-index">{{ index + 1 }}</td>
             <td class="td-code">{{ item.code }}</td>
             <td>{{ item.name }}</td>
@@ -59,7 +65,7 @@
             </td>
           </tr>
           <tr v-if="!items.length">
-            <td colspan="9" class="empty-state">
+            <td colspan="10" class="empty-state">
               <div class="empty-state-icon">📊</div>
               暂无结果
             </td>
@@ -72,6 +78,9 @@
 
 <script setup>
 import { ref, computed, nextTick, watch } from 'vue';
+import { usePickerStore } from '../stores/picker';
+
+const store = usePickerStore();
 
 const props = defineProps({
   items: { type: Array, default: () => [] },
