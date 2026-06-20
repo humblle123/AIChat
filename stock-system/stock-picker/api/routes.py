@@ -75,12 +75,12 @@ async def list_watchlist():
     return [
         StockSearchItem(
             code=item['code'],
-            name=item.get('name', ''),
-            market=item.get('market', ''),
-            industry=item.get('industry', ''),
+            name=item.get('name') or '',
+            market=item.get('market') or '',
+            industry=item.get('industry') or '',
             concept_tags=item.get('concept_tags') or [],
             security_type=item.get('security_type', 'stock'),
-            listed_date=item.get('listed_date', ''),
+            listed_date=item.get('listed_date') or '',
             price=item.get('price') or 0.0,
             change=item.get('change') or 0.0,
             change_pct=item.get('change_pct') or 0.0,
