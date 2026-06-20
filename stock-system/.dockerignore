@@ -1,0 +1,51 @@
+# Git
+.git
+.gitignore
+
+# 大数据文件（通过 volume 挂载，不打入镜像）
+# 注意：必须用前导 / 仅匹配顶层目录，避免排除 stock-picker/data/ 下的 Python 源码
+/data/
+/hsjday 2/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.bak
+.pytest_cache/
+*.egg-info/
+
+# Node
+stock-picker-vue/node_modules/
+stock-picker-vue/dist/
+stock-picker-vue/.vite/
+
+# 数据库文件
+*.db
+*.db-wal
+*.db-shm
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+Thumbs.db
+
+# 旧的原型 HTML 文件（不需要进入镜像）
+*.html
+!stock-picker-vue/index.html
+
+# 旧的 JS 数据文件
+stock-data.js
+formula-results.js
+
+# 文档（可选）
+*.png
+REQUIREMENTS.md
+RUN.md
+to_do_list.md

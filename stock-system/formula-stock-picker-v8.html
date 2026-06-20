@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Stock Picker - 公式选股系统</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #f5f7fa;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #f0f2f5;
+      --bg-hover: #e8ebf0;
+      --text-primary: #1a1d23;
+      --text-secondary: #5c6370;
+      --text-muted: #9ca3af;
+      --border: #e2e5eb;
+      --border-light: #f0f1f3;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-dim: #eff6ff;
+      --rise: #ef4444;
+      --rise-bg: #fef2f2;
+      --fall: #22c55e;
+      --fall-bg: #f0fdf4;
+      --gold: #f59e0b;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    .header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 15px;
+    }
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo-icon svg { width: 16px; height: 16px; fill: white; }
+    .main-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      height: calc(100vh - 56px);
+    }
+    .formula-panel {
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel-section {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-section:last-child {
+      border-bottom: none;
+      flex: 1;
+      overflow-y: auto;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .section-action {
+      font-size: 11px;
+      color: var(--accent);
+      cursor: pointer;
+    }
+    .formula-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .formula-avatar {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .formula-info { flex: 1; }
+    .formula-name { font-size: 14px; font-weight: 600; }
+    .formula-desc { font-size: 11px; color: var(--text-muted); }
+    .editor-box {
+      background: var(--bg-primary);
+      border-radius: 8px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .editor-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      padding: 0 12px;
+      background: var(--bg-tertiary);
+    }
+    .editor-tab {
+      padding: 10px 12px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      position: relative;
+    }
+    .editor-tab.active { color: var(--text-primary); }
+    .editor-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+    }
+    .editor-content { padding: 12px; }
+    .formula-textarea {
+      width: 100%;
+      min-height: 160px;
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1.7;
+      resize: vertical;
+    }
+    .formula-textarea:focus { outline: none; }
+    .editor-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .btn {
+      padding: 8px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      justify-content: center;
+    }
+    .btn:hover { background: var(--bg-tertiary); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+    .btn.primary:hover { background: var(--accent-hover); }
+    .btn svg { width: 14px; height: 14px; }
+    .formula-list { display: flex; flex-direction: column; gap: 8px; }
+    .formula-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .formula-item:hover { background: var(--bg-hover); }
+    .formula-item.active { background: var(--accent-dim); border-color: var(--accent); }
+    .formula-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    .formula-icon.preset { background: rgba(245, 158, 11, 0.15); }
+    .formula-icon.tech { background: rgba(37, 99, 235, 0.15); }
+    .formula-icon.value { background: rgba(34, 197, 94, 0.15); }
+    .formula-icon.growth { background: rgba(139, 92, 246, 0.15); }
+    .formula-item-info { flex: 1; }
+    .formula-item-name { font-size: 13px; font-weight: 500; }
+    .formula-item-count { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+    .results-panel { display: flex; flex-direction: column; overflow: hidden; }
+    .date-banner {
+      background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+      color: white;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .date-info { display: flex; align-items: center; gap: 16px; }
+    .date-main { font-size: 18px; font-weight: 600; }
+    .date-weekday { font-size: 13px; opacity: 0.85; }
+    .date-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.15);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+    }
+    .status-dot-white {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .results-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .results-title { display: flex; align-items: center; gap: 12px; }
+    .results-name { font-size: 16px; font-weight: 600; }
+    .results-count {
+      background: var(--accent-dim);
+      color: var(--accent);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .results-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .results-content { flex: 1; overflow-y: auto; padding: 0 24px 24px; }
+    .stock-table {
+      width: 100%;
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .stock-table thead { background: var(--bg-tertiary); position: sticky; top: 0; }
+    .stock-table th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .stock-table th.sorted { color: var(--accent); }
+    .stock-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 13px;
+    }
+    .stock-table tbody tr { cursor: pointer; transition: background 0.1s; }
+    .stock-table tbody tr:hover { background: var(--bg-tertiary); }
+    .stock-table tbody tr:last-child td { border-bottom: none; }
+    .stock-code { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); }
+    .stock-price { font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+    .stock-change {
+      display: inline-flex;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .stock-change.up { background: var(--rise-bg); color: var(--rise); }
+    .stock-change.down { background: var(--fall-bg); color: var(--fall); }
+    .stock-metric { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-secondary); }
+    .stock-score { display: flex; align-items: center; gap: 8px; }
+    .score-bar { width: 50px; height: 4px; background: var(--bg-tertiary); border-radius: 2px; overflow: hidden; }
+    .score-fill { height: 100%; background: linear-gradient(90deg, var(--gold), #fbbf24); }
+    .score-value { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: var(--gold); }
+    .watch-btn { background: none; border: none; cursor: pointer; padding: 4px; color: var(--text-muted); }
+    .watch-btn:hover, .watch-btn.watched { color: var(--gold); }
+    .watch-btn svg { width: 18px; height: 18px; }
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      margin-top: 16px;
+    }
+    .page-info { font-size: 12px; color: var(--text-muted); }
+    .page-buttons { display: flex; gap: 4px; }
+    .page-btn {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .page-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .page-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M3.5 18.5l6-6 4 4L22 6.5"/><path d="M22 6.5h-5m5 0v5"/></svg>
+      </div>
+      Smart Stock Picker
+    </div>
+  </header>
+
+  <main class="main-layout">
+    <aside class="formula-panel">
+      <div class="panel-section">
+        <div class="section-header">
+          <span class="section-title">当前公式</span>
+        </div>
+        <div class="formula-header">
+          <div class="formula-avatar" id="headerAvatar">💰</div>
+          <div class="formula-info">
+            <div class="formula-name" id="headerName">低估成长股</div>
+            <div class="formula-desc" id="headerDesc">PEG&lt;1, ROE&gt;20%</div>
+          </div>
+        </div>
+        <div class="editor-box">
+          <div class="editor-tabs">
+            <button class="editor-tab active">条件公式</button>
+            <button class="editor-tab">参数设置</button>
+          </div>
+          <div class="editor-content">
+            <textarea class="formula-textarea" id="formulaText">// 低估成长股
+PE := DynEquity("PE");
+ROE := DynEquity("ROE");
+PROFIT_GROWTH := DynEquity("NetProfitGrowRate");
+PEG := DynEquity("PEG");
+
+FILTER := PEG &lt; 1 AND ROE &gt; 20 AND PROFIT_GROWTH &gt; 15;
+FILTER;</textarea>
+            <div class="editor-actions">
+              <button class="btn">保存</button>
+              <button class="btn primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                执行选股
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-header">
+          <span class="section-title">我的公式</span>
+          <span class="section-action">+ 新建</span>
+        </div>
+        <div class="formula-list" id="formulaList">
+          <!-- Formula items will be rendered by JS -->
+        </div>
+      </div>
+    </aside>
+
+    <section class="results-panel">
+      <div class="date-banner">
+        <div class="date-info">
+          <span class="date-main">2026年6月9日</span>
+          <span class="date-weekday">星期一</span>
+        </div>
+        <div class="date-status">
+          <span class="status-dot-white"></span>
+          交易日 <span id="bannerTime" style="margin-left: 8px; font-family: 'JetBrains Mono', monospace;">09:32:15</span>
+        </div>
+      </div>
+
+      <div class="results-header">
+        <div class="results-title">
+          <span class="results-name" id="resultName">选股结果</span>
+          <span class="results-count" id="resultCount">23</span>
+          <span class="results-time" id="resultTime">09:32:15 更新</span>
+        </div>
+        <button class="btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          刷新
+        </button>
+      </div>
+
+      <div class="results-content">
+        <table class="stock-table">
+          <thead>
+            <tr>
+              <th style="width: 40px;">#</th>
+              <th style="width: 90px;" class="sorted">代码</th>
+              <th>名称</th>
+              <th style="width: 80px;">现价</th>
+              <th style="width: 80px;">涨跌幅</th>
+              <th style="width: 85px;">总市值</th>
+              <th style="width: 65px;">PE</th>
+              <th style="width: 65px;">PB</th>
+              <th style="width: 65px;">ROE</th>
+              <th style="width: 95px;">评分</th>
+              <th style="width: 50px;"></th>
+            </tr>
+          </thead>
+          <tbody id="stockTableBody">
+            <!-- Stocks will be rendered by JS -->
+          </tbody>
+        </table>
+        <div class="pagination">
+          <div class="page-info">显示 1-8 条，共 23 条</div>
+          <div class="page-buttons">
+            <button class="page-btn" disabled>‹</button>
+            <button class="page-btn active">1</button>
+            <button class="page-btn">2</button>
+            <button class="page-btn">3</button>
+            <button class="page-btn">›</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Formula data
+    const formulas = [
+      {
+        id: 'preset1',
+        name: '低估值蓝筹',
+        icon: '📊',
+        iconClass: 'preset',
+        desc: 'PE&lt;15, ROE&gt;15%',
+        count: 12,
+        code: '// 低估值蓝筹\nPE := DynEquity("PE");\nPB := DynEquity("PB");\nROE := DynEquity("ROE");\n\nFILTER := PE &lt; 15 AND PB &lt; 3 AND ROE &gt; 15;\nFILTER;'
+      },
+      {
+        id: 'preset2',
+        name: '高成长科技',
+        icon: '🚀',
+        iconClass: 'preset',
+        desc: '营收增长&gt;30%',
+        count: 8,
+        code: '// 高成长科技\nREVENUE_GROWTH := DynEquity("RevenueGrowRate");\nPROFIT_GROWTH := DynEquity("NetProfitGrowRate");\n\nFILTER := REVENUE_GROWTH &gt; 30 AND PROFIT_GROWTH &gt; 20;\nFILTER;'
+      },
+      {
+        id: 'user1',
+        name: '低估成长股',
+        icon: '💰',
+        iconClass: 'value',
+        desc: 'PEG&lt;1, ROE&gt;20%',
+        count: 23,
+        code: '// 低估成长股\nPE := DynEquity("PE");\nROE := DynEquity("ROE");\nPROFIT_GROWTH := DynEquity("NetProfitGrowRate");\nPEG := DynEquity("PEG");\n\nFILTER := PEG &lt; 1 AND ROE &gt; 20 AND PROFIT_GROWTH &gt; 15;\nFILTER;'
+      },
+      {
+        id: 'user2',
+        name: 'MACD金叉',
+        icon: '⚡',
+        iconClass: 'tech',
+        desc: 'DIF&gt;DEA 金叉',
+        count: 5,
+        code: '// MACD金叉\nDIF := MACD(12, 26, 9);\nDEA := MACD(12, 26, 9);\n\nFILTER := DIF &gt; DEA AND REF(DIF, 1) &lt;= REF(DEA, 1);\nFILTER;'
+      },
+      {
+        id: 'user3',
+        name: '业绩反转',
+        icon: '📈',
+        iconClass: 'growth',
+        desc: '净利润增长由负转正',
+        count: 15,
+        code: '// 业绩反转\nPROFIT_GROWTH := DynEquity("NetProfitGrowRate");\nPROFIT_Q1 := DynEquity("NetProfitGrowRateQ1");\n\nFILTER := PROFIT_GROWTH &gt; 0 AND PROFIT_Q1 &lt; 0;\nFILTER;'
+      },
+      {
+        id: 'user4',
+        name: '均线多头',
+        icon: '🎯',
+        iconClass: 'tech',
+        desc: 'MA5&gt;MA10&gt;MA20',
+        count: 31,
+        code: '// 均线多头排列\nMA5 := MA(CLOSE, 5);\nMA10 := MA(CLOSE, 10);\nMA20 := MA(CLOSE, 20);\nMA60 := MA(CLOSE, 60);\n\nFILTER := MA5 &gt; MA10 AND MA10 &gt; MA20 AND MA20 &gt; MA60;\nFILTER;'
+      }
+    ];
+
+    let currentFormula = formulas[2]; // Default: 低估成长股
+
+    // Stock data
+    const stocks = [
+      { rank: 1, code: '600519', name: '贵州茅台', price: '1,682.50', change: '+2.34%', up: true, mktcap: '2.11万亿', pe: '28.5', pb: '11.2', roe: '32.8%', score: 92 },
+      { rank: 2, code: '000858', name: '五粮液', price: '145.80', change: '+1.87%', up: true, mktcap: '5658亿', pe: '18.2', pb: '5.8', roe: '28.5%', score: 88 },
+      { rank: 3, code: '300750', name: '宁德时代', price: '198.60', change: '-0.52%', up: false, mktcap: '8752亿', pe: '22.1', pb: '4.6', roe: '24.3%', score: 85 },
+      { rank: 4, code: '601318', name: '中国平安', price: '42.35', change: '+0.89%', up: true, mktcap: '7742亿', pe: '8.5', pb: '1.2', roe: '18.6%', score: 82 },
+      { rank: 5, code: '688041', name: '海光信息', price: '78.50', change: '+4.21%', up: true, mktcap: '1825亿', pe: '156.8', pb: '12.3', roe: '21.5%', score: 79 },
+      { rank: 6, code: '002475', name: '立讯精密', price: '28.90', change: '-1.23%', up: false, mktcap: '2056亿', pe: '24.5', pb: '5.2', roe: '19.8%', score: 76 },
+      { rank: 7, code: '300059', name: '东方财富', price: '15.68', change: '+2.15%', up: true, mktcap: '2185亿', pe: '35.2', pb: '4.8', roe: '17.2%', score: 73 },
+      { rank: 8, code: '600036', name: '招商银行', price: '35.20', change: '+0.65%', up: true, mktcap: '8875亿', pe: '6.8', pb: '1.1', roe: '16.8%', score: 71 }
+    ];
+
+    // Render formula list
+    function renderFormulaList() {
+      const container = document.getElementById('formulaList');
+      container.innerHTML = formulas.map(f => {
+        const activeClass = f.id === currentFormula.id ? ' active' : '';
+        return '<div class="formula-item' + activeClass + '" onclick="switchFormula(\'' + f.id + '\')">' +
+          '<div class="formula-icon ' + f.iconClass + '">' + f.icon + '</div>' +
+          '<div class="formula-item-info">' +
+            '<div class="formula-item-name">' + f.name + '</div>' +
+            '<div class="formula-item-count">' + f.count + ' 只</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    // Switch formula
+    function switchFormula(id) {
+      const formula = formulas.find(f => f.id === id);
+      if (!formula) return;
+      
+      currentFormula = formula;
+      
+      // Update header
+      document.getElementById('headerAvatar').textContent = formula.icon;
+      document.getElementById('headerName').textContent = formula.name;
+      document.getElementById('headerDesc').textContent = formula.desc;
+      
+      // Update textarea
+      document.getElementById('formulaText').value = formula.code;
+      
+      // Update results header
+      document.getElementById('resultName').textContent = formula.name;
+      document.getElementById('resultCount').textContent = formula.count;
+      
+      // Re-render list to update active state
+      renderFormulaList();
+    }
+
+    // Render stocks
+    function renderStocks() {
+      const tbody = document.getElementById('stockTableBody');
+      tbody.innerHTML = stocks.map(s => {
+        const changeClass = s.up ? 'up' : 'down';
+        return '<tr>' +
+          '<td>' + s.rank + '</td>' +
+          '<td class="stock-code">' + s.code + '</td>' +
+          '<td>' + s.name + '</td>' +
+          '<td class="stock-price">' + s.price + '</td>' +
+          '<td><span class="stock-change ' + changeClass + '">' + s.change + '</span></td>' +
+          '<td class="stock-metric">' + s.mktcap + '</td>' +
+          '<td class="stock-metric">' + s.pe + '</td>' +
+          '<td class="stock-metric">' + s.pb + '</td>' +
+          '<td class="stock-metric">' + s.roe + '</td>' +
+          '<td><div class="stock-score">' +
+            '<div class="score-bar"><div class="score-fill" style="width:' + s.score + '%"></div></div>' +
+            '<span class="score-value">' + s.score + '</span>' +
+          '</div></td>' +
+          '<td><button class="watch-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></button></td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    // Toggle watch
+    document.querySelectorAll('.watch-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        this.classList.toggle('watched');
+        const svg = this.querySelector('svg');
+        svg.setAttribute('fill', this.classList.contains('watched') ? 'currentColor' : 'none');
+      });
+    });
+
+    // Update time
+    function updateTime() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('zh-CN', { hour12: false });
+      document.getElementById('bannerTime').textContent = timeStr;
+    }
+    updateTime();
+    setInterval(updateTime, 1000);
+
+    // Init
+    renderFormulaList();
+    renderStocks();
+  </script>
+</body>
+</html>

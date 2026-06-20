@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Stock Picker - 公式选股系统</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #f5f7fa;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #f0f2f5;
+      --bg-hover: #e8ebf0;
+      --text-primary: #1a1d23;
+      --text-secondary: #5c6370;
+      --text-muted: #9ca3af;
+      --border: #e2e5eb;
+      --border-light: #f0f1f3;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-dim: #eff6ff;
+      --rise: #ef4444;
+      --rise-bg: #fef2f2;
+      --fall: #22c55e;
+      --fall-bg: #f0fdf4;
+      --gold: #f59e0b;
+      --purple: #8b5cf6;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-icon svg {
+      width: 16px;
+      height: 16px;
+      fill: white;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .market-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--fall);
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.closed {
+      background: var(--text-muted);
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .header-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* Main Layout */
+    .main-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: calc(100vh - 56px);
+    }
+
+    /* Sidebar - Formula Panel */
+    .formula-panel {
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .new-formula-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 10px;
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .new-formula-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .new-formula-btn svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    /* Formula List */
+    .formula-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .formula-group {
+      margin-bottom: 16px;
+    }
+
+    .formula-group-title {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      padding: 0 8px;
+      margin-bottom: 6px;
+    }
+
+    .formula-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 1px solid transparent;
+    }
+
+    .formula-item:hover {
+      background: var(--bg-hover);
+    }
+
+    .formula-item.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+    }
+
+    .formula-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .formula-icon.tech { background: rgba(37, 99, 235, 0.12); color: #2563eb; }
+    .formula-icon.value { background: rgba(34, 197, 94, 0.12); color: #16a34a; }
+    .formula-icon.growth { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
+    .formula-icon.preset { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+
+    .formula-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .formula-name {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .formula-count {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Main Content */
+    .main-content {
+      padding: 20px 24px;
+    }
+
+    /* Results Header */
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .results-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .results-name {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .results-count {
+      background: var(--accent-dim);
+      color: var(--accent);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .results-time {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .results-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .refresh-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border: none;
+    }
+
+    .refresh-toggle.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .toggle-switch {
+      width: 32px;
+      height: 18px;
+      background: var(--border);
+      border-radius: 9px;
+      position: relative;
+      transition: background 0.2s;
+    }
+
+    .refresh-toggle.active .toggle-switch {
+      background: var(--accent);
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      background: white;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: left 0.2s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .refresh-toggle.active .toggle-switch::after {
+      left: 16px;
+    }
+
+    .btn {
+      padding: 8px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .btn:hover {
+      border-color: var(--text-muted);
+      color: var(--text-primary);
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .btn.primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Stock Table */
+    .stock-table {
+      width: 100%;
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .stock-table thead {
+      background: var(--bg-tertiary);
+    }
+
+    .stock-table th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .stock-table th:hover {
+      color: var(--text-primary);
+    }
+
+    .stock-table th.sorted {
+      color: var(--accent);
+    }
+
+    .stock-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 13px;
+    }
+
+    .stock-table tbody tr {
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .stock-table tbody tr:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .stock-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .stock-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .stock-name {
+      font-weight: 500;
+    }
+
+    .stock-price {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+    }
+
+    .stock-change {
+      display: inline-flex;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stock-change.up {
+      background: var(--rise-bg);
+      color: var(--rise);
+    }
+
+    .stock-change.down {
+      background: var(--fall-bg);
+      color: var(--fall);
+    }
+
+    .stock-metric {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .stock-score {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .score-bar {
+      width: 50px;
+      height: 4px;
+      background: var(--bg-tertiary);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .score-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--gold), #fbbf24);
+    }
+
+    .score-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gold);
+    }
+
+    .watch-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: var(--text-muted);
+      transition: color 0.15s;
+    }
+
+    .watch-btn:hover {
+      color: var(--gold);
+    }
+
+    .watch-btn.watched {
+      color: var(--gold);
+    }
+
+    .watch-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Pagination */
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .page-info {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .page-buttons {
+      display: flex;
+      gap: 4px;
+    }
+
+    .page-btn {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .page-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .page-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .page-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Formula Editor - Collapsible */
+    .formula-editor {
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      margin-top: 20px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .formula-editor.show {
+      display: block;
+    }
+
+    .editor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+
+    .editor-header:hover {
+      background: var(--bg-hover);
+    }
+
+    .editor-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .editor-title svg {
+      transition: transform 0.2s;
+    }
+
+    .formula-editor.show .editor-title svg {
+      transform: rotate(90deg);
+    }
+
+    .editor-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .editor-content {
+      padding: 16px;
+      display: none;
+    }
+
+    .formula-editor.show .editor-content {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 16px;
+    }
+
+    .editor-main {
+      background: var(--bg-primary);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .editor-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      padding: 0 12px;
+    }
+
+    .editor-tab {
+      padding: 10px 14px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.15s;
+    }
+
+    .editor-tab:hover {
+      color: var(--text-secondary);
+    }
+
+    .editor-tab.active {
+      color: var(--text-primary);
+    }
+
+    .editor-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    .editor-area {
+      padding: 12px;
+    }
+
+    .formula-textarea {
+      width: 100%;
+      min-height: 180px;
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      resize: vertical;
+    }
+
+    .formula-textarea:focus {
+      outline: none;
+    }
+
+    .formula-textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Help Panel */
+    .help-panel {
+      background: var(--bg-primary);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .help-header {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .help-content {
+      padding: 10px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .help-section {
+      margin-bottom: 12px;
+    }
+
+    .help-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .help-title {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .help-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 8px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      margin-bottom: 3px;
+      font-size: 10px;
+    }
+
+    .help-item code {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+    }
+
+    .help-item span {
+      color: var(--text-secondary);
+    }
+
+    /* Empty State */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      text-align: center;
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .empty-icon {
+      width: 64px;
+      height: 64px;
+      background: var(--bg-tertiary);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .empty-icon svg {
+      width: 32px;
+      height: 32px;
+      color: var(--text-muted);
+    }
+
+    .empty-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .empty-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      max-width: 280px;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M3.5 18.5l6-6 4 4L22 6.5"/><path d="M22 6.5h-5m5 0v5"/></svg>
+      </div>
+      Smart Stock Picker
+    </div>
+    <div class="header-right">
+      <div class="market-status">
+        <div class="status-dot"></div>
+        <span>交易中</span>
+      </div>
+      <div class="header-time" id="currentTime">09:32:15</div>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="main-layout">
+    <!-- Formula Panel -->
+    <aside class="formula-panel">
+      <div class="panel-header">
+        <span class="panel-title">我的公式</span>
+        <button class="new-formula-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14m-7-7h14"/></svg>
+          新建
+        </button>
+      </div>
+
+      <div class="formula-list">
+        <!-- Preset Formulas -->
+        <div class="formula-group">
+          <div class="formula-group-title">系统预设</div>
+          
+          <div class="formula-item" onclick="selectFormula(this)">
+            <div class="formula-icon preset">📊</div>
+            <div class="formula-info">
+              <div class="formula-name">低估值蓝筹</div>
+              <div class="formula-count">12 只</div>
+            </div>
+          </div>
+
+          <div class="formula-item" onclick="selectFormula(this)">
+            <div class="formula-icon preset">🚀</div>
+            <div class="formula-info">
+              <div class="formula-name">高成长科技</div>
+              <div class="formula-count">8 只</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- User Formulas -->
+        <div class="formula-group">
+          <div class="formula-group-title">我的公式</div>
+          
+          <div class="formula-item active" onclick="selectFormula(this)">
+            <div class="formula-icon value">💰</div>
+            <div class="formula-info">
+              <div class="formula-name">低估成长股</div>
+              <div class="formula-count">23 只</div>
+            </div>
+          </div>
+
+          <div class="formula-item" onclick="selectFormula(this)">
+            <div class="formula-icon tech">⚡</div>
+            <div class="formula-info">
+              <div class="formula-name">MACD金叉</div>
+              <div class="formula-count">5 只</div>
+            </div>
+          </div>
+
+          <div class="formula-item" onclick="selectFormula(this)">
+            <div class="formula-icon growth">📈</div>
+            <div class="formula-info">
+              <div class="formula-name">业绩反转</div>
+              <div class="formula-count">15 只</div>
+            </div>
+          </div>
+
+          <div class="formula-item" onclick="selectFormula(this)">
+            <div class="formula-icon tech">🎯</div>
+            <div class="formula-info">
+              <div class="formula-name">均线多头</div>
+              <div class="formula-count">31 只</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Strategy Group -->
+        <div class="formula-group">
+          <div class="formula-group-title">我的策略</div>
+          
+          <div class="formula-item" onclick="selectFormula(this)">
+            <div class="formula-icon" style="background: rgba(239, 68, 68, 0.12); color: #dc2626;">🔥</div>
+            <div class="formula-info">
+              <div class="formula-name">每日金股</div>
+              <div class="formula-count">3 只</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <section class="main-content">
+      <!-- Results Header -->
+      <div class="results-header">
+        <div class="results-title">
+          <span class="results-name">低估成长股</span>
+          <span class="results-count">23</span>
+          <span class="results-time">更新于 09:32:15</span>
+        </div>
+        <div class="results-controls">
+          <button class="refresh-toggle active" onclick="toggleRefresh(this)">
+            <div class="toggle-switch"></div>
+            <span>自动刷新</span>
+          </button>
+          <button class="btn" onclick="refreshResults()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            刷新
+          </button>
+        </div>
+      </div>
+
+      <!-- Stock Table -->
+      <table class="stock-table">
+        <thead>
+          <tr>
+            <th style="width: 40px;">#</th>
+            <th style="width: 90px;" class="sorted">代码 ↕</th>
+            <th>名称</th>
+            <th style="width: 80px;">现价</th>
+            <th style="width: 80px;">涨跌幅</th>
+            <th style="width: 85px;">总市值</th>
+            <th style="width: 65px;">PE</th>
+            <th style="width: 65px;">PB</th>
+            <th style="width: 65px;">ROE</th>
+            <th style="width: 95px;">评分</th>
+            <th style="width: 50px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr onclick="viewStockDetail('600519')">
+            <td>1</td>
+            <td class="stock-code">600519</td>
+            <td class="stock-name">贵州茅台</td>
+            <td class="stock-price">1,682.50</td>
+            <td><span class="stock-change up">+2.34%</span></td>
+            <td class="stock-metric">2.11万亿</td>
+            <td class="stock-metric">28.5</td>
+            <td class="stock-metric">11.2</td>
+            <td class="stock-metric">32.8%</td>
+            <td>
+              <div class="stock-score">
+                <div class="score-bar"><div class="score-fill" style="width: 92%;"></div></div>
+                <span class="score-value">92</span>
+              </div>
+            </td>
+            <td>
+              <button class="watch-btn" onclick="toggleWatch(event, this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              </button>
+            </td>
+          </tr>
+          <tr onclick="viewStockDetail('000858')">
+            <td>2</td>
+            <td class="stock-code">000858</td>
+            <td class="stock-name">五粮液</td>
+            <td class="stock-price">145.80</td>
+            <td><span class="stock-change up">+1.87%</span></td>
+            <td class="stock-metric">5658亿</td>
+            <td class="stock-metric">18.2</td>
+            <td class="stock-metric">5.8</td>
+            <td class="stock-metric">28.5%</td>
+            <td>
+              <div class="stock-score">
+                <div class="score-bar"><div class="score-fill" style="width: 88%;"></div></div>
+                <span class="score-value">88</span>
+              </div>
+            </td>
+            <td>
+              <button class="watch-btn watched" onclick="toggleWatch(event, this)">
+                <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              </button>
+            </td>
+          </tr>
+          <tr onclick="viewStockDetail('300750')">
+            <td>3</td>
+            <td class="stock-code">300750</td>
+            <td class="stock-name">宁德时代</td>
+            <td class="stock-price">198.60</td>
+            <td><span class="stock-change down">-0.52%</span></td>
+            <td class="stock-metric">8752亿</td>
+            <td class="stock-metric">22.1</td>
+            <td class="stock-metric">4.6</td>
+            <td class="stock-metric">24.3%</td>
+            <td>
+              <div class="stock-score">
+                <div class="score-bar"><div class="score-fill" style="width: 85%;"></div></div>
+                <span class="score-value">85</span>
+              </div>
+            </td>
+            <td>
+              <button class="watch-btn" onclick="toggleWatch(event, this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              </button>
+            </td>
+          </tr>
+          <tr onclick="viewStockDetail('601318')">
+            <td>4</td>
+            <td class="stock-code">601318</td>
+            <td class="stock-name">中国平安</td>
+            <td class="stock-price">42.35</td>
+            <td><span class="stock-change up">+0.89%</span></td>
+            <td class="stock-metric">7742亿</td>
+            <td class="stock-metric">8.5</td>
+            <td class="stock-metric">1.2</td>
+            <td class="stock-metric">18.6%</td>
+            <td>
+              <div class="stock-score">
+                <div class="score-bar"><div class="score-fill" style="width: 82%;"></div></div>
+                <span class="score-value">82</span>
+              </div>
+            </td>
+            <td>
+              <button class="watch-btn" onclick="toggleWatch(event, this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              </button>
+            </td>
+          </tr>
+          <tr onclick="viewStockDetail('688041')">
+            <td>5</td>
+            <td class="stock-code">688041</td>
+            <td class="stock-name">海光信息</td>
+            <td class="stock-price">78.50</td>
+            <td><span class="stock-change up">+4.21%</span></td>
+            <td class="stock-metric">1825亿</td>
+            <td class="stock-metric">156.8</td>
+            <td class="stock-metric">12.3</td>
+            <td class="stock-metric">21.5%</td>
+            <td>
+              <div class="stock-score">
+                <div class="score-bar"><div class="score-fill" style="width: 79%;"></div></div>
+                <span class="score-value">79</span>
+              </div>
+            </td>
+            <td>
+              <button class="watch-btn" onclick="toggleWatch(event, this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              </button>
+            </td>
+          </tr>
+          <tr onclick="viewStockDetail('002475')">
+            <td>6</td>
+            <td class="stock-code">002475</td>
+            <td class="stock-name">立讯精密</td>
+            <td class="stock-price">28.90</td>
+            <td><span class="stock-change down">-1.23%</span></td>
+            <td class="stock-metric">2056亿</td>
+            <td class="stock-metric">24.5</td>
+            <td class="stock-metric">5.2</td>
+            <td class="stock-metric">19.8%</td>
+            <td>
+              <div class="stock-score">
+                <div class="score-bar"><div class="score-fill" style="width: 76%;"></div></div>
+                <span class="score-value">76</span>
+              </div>
+            </td>
+            <td>
+              <button class="watch-btn" onclick="toggleWatch(event, this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              </button>
+            </td>
+          </tr>
+          <tr onclick="viewStockDetail('300059')">
+            <td>7</td>
+            <td class="stock-code">300059</td>
+            <td class="stock-name">东方财富</td>
+            <td class="stock-price">15.68</td>
+            <td><span class="stock-change up">+2.15%</span></td>
+            <td class="stock-metric">2185亿</td>
+            <td class="stock-metric">35.2</td>
+            <td class="stock-metric">4.8</td>
+            <td class="stock-metric">17.2%</td>
+            <td>
+              <div class="stock-score">
+                <div class="score-bar"><div class="score-fill" style="width: 73%;"></div></div>
+                <span class="score-value">73</span>
+              </div>
+            </td>
+            <td>
+              <button class="watch-btn" onclick="toggleWatch(event, this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              </button>
+            </td>
+          </tr>
+          <tr onclick="viewStockDetail('600036')">
+            <td>8</td>
+            <td class="stock-code">600036</td>
+            <td class="stock-name">招商银行</td>
+            <td class="stock-price">35.20</td>
+            <td><span class="stock-change up">+0.65%</span></td>
+            <td class="stock-metric">8875亿</td>
+            <td class="stock-metric">6.8</td>
+            <td class="stock-metric">1.1</td>
+            <td class="stock-metric">16.8%</td>
+            <td>
+              <div class="stock-score">
+                <div class="score-bar"><div class="score-fill" style="width: 71%;"></div></div>
+                <span class="score-value">71</span>
+              </div>
+            </td>
+            <td>
+              <button class="watch-btn" onclick="toggleWatch(event, this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Pagination -->
+      <div class="pagination">
+        <div class="page-info">显示 1-8 条，共 23 条</div>
+        <div class="page-buttons">
+          <button class="page-btn" disabled>‹</button>
+          <button class="page-btn active">1</button>
+          <button class="page-btn">2</button>
+          <button class="page-btn">3</button>
+          <button class="page-btn">›</button>
+        </div>
+      </div>
+
+      <!-- Formula Editor - Collapsible -->
+      <div class="formula-editor" id="formulaEditor">
+        <div class="editor-header" onclick="toggleEditor()">
+          <span class="editor-title">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            公式编辑器
+          </span>
+          <div class="editor-actions" onclick="event.stopPropagation()">
+            <button class="btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
+              检查
+            </button>
+            <button class="btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+              保存
+            </button>
+            <button class="btn primary" onclick="runFormula()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              执行
+            </button>
+          </div>
+        </div>
+        <div class="editor-content">
+          <div class="editor-main">
+            <div class="editor-tabs">
+              <button class="editor-tab active">条件公式</button>
+              <button class="editor-tab">参数设置</button>
+              <button class="editor-tab">历史回测</button>
+            </div>
+            <div class="editor-area">
+              <textarea class="formula-textarea" id="formulaInput">// 低估成长股选股公式
+PE :=DynEquity("PE");
+ROE := DynEquity("ROE");
+PROFIT_GROWTH := DynEquity("NetProfitGrowRate");
+PEG := DynEquity("PEG");
+
+COND1 := PEG < 1;
+COND2 := ROE > 20;
+COND3 := PROFIT_GROWTH > 15;
+
+FILTER := COND1 AND COND2 AND COND3;
+FILTER;</textarea>
+            </div>
+          </div>
+
+          <div class="help-panel">
+            <div class="help-header">函数速查</div>
+            <div class="help-content">
+              <div class="help-section">
+                <div class="help-title">行情数据</div>
+                <div class="help-item"><code>CLOSE</code><span>收盘价</span></div>
+                <div class="help-item"><code>HIGH</code><span>最高价</span></div>
+                <div class="help-item"><code>LOW</code><span>最低价</span></div>
+                <div class="help-item"><code>VOL</code><span>成交量</span></div>
+              </div>
+              <div class="help-section">
+                <div class="help-title">财务数据</div>
+                <div class="help-item"><code>DynEquity("PE")</code><span>动态PE</span></div>
+                <div class="help-item"><code>DynEquity("PB")</code><span>市净率</span></div>
+                <div class="help-item"><code>DynEquity("ROE")</code><span>ROE</span></div>
+                <div class="help-item"><code>DynEquity("MarketCap")</code><span>总市值</span></div>
+              </div>
+              <div class="help-section">
+                <div class="help-title">技术指标</div>
+                <div class="help-item"><code>MA(C,N)</code><span>N日均线</span></div>
+                <div class="help-item"><code>MACD</code><span>MACD</span></div>
+                <div class="help-item"><code>RSI</code><span>RSI</span></div>
+              </div>
+              <div class="help-section">
+                <div class="help-title">逻辑运算</div>
+                <div class="help-item"><code>AND / OR</code><span>与/或</span></div>
+                <div class="help-item"><code>&gt; &lt; =</code><span>比较</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Update time
+    function updateTime() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('zh-CN', { hour12: false });
+      document.getElementById('currentTime').textContent = timeStr;
+    }
+    updateTime();
+    setInterval(updateTime, 1000);
+
+    // Formula selection
+    function selectFormula(el) {
+      document.querySelectorAll('.formula-item').forEach(item => item.classList.remove('active'));
+      el.classList.add('active');
+    }
+
+    // Toggle editor
+    function toggleEditor() {
+      const editor = document.getElementById('formulaEditor');
+      editor.classList.toggle('show');
+    }
+
+    // Toggle refresh
+    function toggleRefresh(el) {
+      el.classList.toggle('active');
+    }
+
+    // Toggle watch
+    function toggleWatch(event, btn) {
+      event.stopPropagation();
+      btn.classList.toggle('watched');
+      const svg = btn.querySelector('svg');
+      if (btn.classList.contains('watched')) {
+        svg.setAttribute('fill', 'currentColor');
+      } else {
+        svg.setAttribute('fill', 'none');
+      }
+    }
+
+    // View stock detail
+    function viewStockDetail(code) {
+      console.log('View stock:', code);
+    }
+
+    // Refresh results
+    function refreshResults() {
+      const btn = event.target.closest('.btn');
+      btn.style.opacity = '0.7';
+      setTimeout(() => {
+        btn.style.opacity = '1';
+      }, 500);
+    }
+
+    // Run formula
+    function runFormula() {
+      const btn = event.target.closest('.btn');
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> 执行中...';
+      
+      setTimeout(() => {
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 完成';
+        setTimeout(() => {
+          btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> 执行';
+        }, 1500);
+      }, 2000);
+    }
+
+    // Editor tabs
+    document.querySelectorAll('.editor-tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.editor-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+
+    // Add spin animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .spin { animation: spin 1s linear infinite; }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>

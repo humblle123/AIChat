@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Stock Picker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
+  <style>
+    :root {
+      --bg-primary: #f5f7fa;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #f0f2f5;
+      --bg-hover: #e8ebf0;
+      --text-primary: #1a1d23;
+      --text-secondary: #5c6370;
+      --text-muted: #9ca3af;
+      --border: #e2e5eb;
+      --border-light: #edf0f5;
+      --accent: #2563eb;
+      --accent-dim: #eff6ff;
+      --rise: #ef4444;
+      --rise-bg: #fef2f2;
+      --fall: #22c55e;
+      --fall-bg: #f0fdf4;
+      --gold: #f59e0b;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+    .header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
+    .logo-icon {
+      width: 28px; height:28px; background: linear-gradient(135deg, #2563eb, #1d4ed8); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .logo-icon svg { width: 16px; height: 16px; fill: white; }
+    .header-date { font-size: 13px; color: var(--text-secondary); }
+    .main-layout { display: grid; grid-template-columns: 340px 1fr; height: calc(100vh - 56px); }
+    .panel { background: var(--bg-secondary); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .panel-section { padding: 16px; border-bottom: 1px solid var(--border); }
+    .panel-section:last-child { flex: 1; overflow-y: auto; border-bottom: none; }
+    .section-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .formula-header { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 12px; }
+    .formula-avatar { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), #1d4ed8); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+    .formula-info { flex: 1; }
+    .formula-name { font-size: 13px; font-weight: 600; }
+    .formula-desc { font-size: 10px; color: var(--text-muted); }
+    .editor-box { background: var(--bg-primary); border-radius: 8px; margin-bottom: 12px; }
+    .editor-content { padding: 10px; }
+    .formula-textarea { width: 100%; min-height: 60px; background: transparent; border: none; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.6; resize: vertical; }
+    .formula-textarea:focus { outline: none; }
+    .editor-actions { display: flex; gap: 6px; margin-top: 10px; }
+    .btn { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-secondary); color: var(--text-secondary); font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; flex: 1; justify-content: center; transition: all 0.15s; }
+    .btn:hover { background: var(--bg-tertiary); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+    .btn.primary:hover { background: #1d4ed8; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .formula-list { display: flex; flex-direction: column; gap: 6px; }
+    .formula-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--bg-tertiary); border-radius: 6px; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; }
+    .formula-item:hover { background: var(--bg-hover); }
+    .formula-item.active { background: var(--accent-dim); border-color: var(--accent); }
+    .formula-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+    .formula-icon.b1 { background: rgba(37, 99, 235, 0.15); }
+    .formula-icon.s2 { background: rgba(139, 92, 246, 0.15); }
+    .formula-icon.s3 { background: rgba(239, 68, 68, 0.15); }
+    .formula-icon.kd1 { background: rgba(34, 197, 94, 0.15); }
+    .formula-item-info { flex: 1; min-width: 0; }
+    .formula-item-name { font-size: 12px; font-weight: 500; }
+    .formula-item-count { font-size: 10px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+    .strategy-tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 34px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+    }
+    .strategy-tag.b1 { color: #2563eb; border-color: rgba(37, 99, 235, 0.2); background: rgba(37, 99, 235, 0.08); }
+    .strategy-tag.s2 { color: #8b5cf6; border-color: rgba(139, 92, 246, 0.2); background: rgba(139, 92, 246, 0.08); }
+    .strategy-tag.s3 { color: #ef4444; border-color: rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.08); }
+    .strategy-tag.kd1 { color: #22c55e; border-color: rgba(34, 197, 94, 0.2); background: rgba(34, 197, 94, 0.08); }
+    .results-panel { display: flex; flex-direction: column; overflow: hidden; }
+    .date-banner { background: linear-gradient(135deg, #1e40af, #2563eb); color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+    .date-info { display: flex; align-items: center; gap: 12px; }
+    .date-main { font-size: 16px; font-weight: 600; }
+    .date-weekday { font-size: 12px; opacity: 0.85; }
+    .date-status { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 12px; font-size: 11px; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; }
+    .results-header { padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--bg-secondary); display: flex; justify-content: space-between; align-items: center; }
+    .results-title { display: flex; align-items: center; gap: 10px; }
+    .results-name { font-size: 14px; font-weight: 600; }
+    .results-count { background: var(--accent-dim); color: var(--accent); padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+    .results-time { font-size: 10px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+    .content-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .kline-section { background: var(--bg-secondary); border-bottom: 1px solid var(--border); padding: 12px 20px; }
+    .kline-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .stock-info { display: flex; align-items: center; gap: 16px; }
+    .stock-name { font-size: 16px; font-weight: 600; }
+    .stock-code { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+    .stock-price { font-size: 20px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+    .stock-change { font-size: 12px; font-family: 'JetBrains Mono', monospace; margin-left: 6px; }
+    .stock-change.up { color: var(--rise); }
+    .stock-change.down { color: var(--fall); }
+    .kline-controls { display: flex; gap: 4px; }
+    .period-btn { padding: 4px 10px; border: 1px solid var(--border); background: var(--bg-secondary); border-radius: 4px; font-size: 11px; cursor: pointer; }
+    .period-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+    #klineChart { width: 100%; height: 260px; background: var(--bg-tertiary); border-radius: 6px; }
+    .stock-list-section { flex: 1; overflow-y: auto; padding: 0 20px 16px; }
+    .stock-table { width: 100%; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; }
+    .stock-table thead { background: var(--bg-tertiary); }
+    .stock-table th { padding: 10px 12px; text-align: left; font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 1px solid var(--border); }
+    .stock-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); font-size: 12px; }
+    .stock-table tbody tr { cursor: pointer; transition: background 0.1s; }
+    .stock-table tbody tr:hover { background: var(--bg-tertiary); }
+    .stock-table tbody tr.selected { background: var(--accent-dim); }
+    .stock-table tbody tr:last-child td { border-bottom: none; }
+    .td-code { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); }
+    .td-price { font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+    .td-change { display: inline-flex; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: 500; font-family: 'JetBrains Mono', monospace; }
+    .td-change.up { background: var(--rise-bg); color: var(--rise); }
+    .td-change.down { background: var(--fall-bg); color: var(--fall); }
+    .td-metric { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-secondary); }
+    .score-bar { display: inline-block; width: 40px; height: 4px; background: var(--bg-tertiary); border-radius: 2px; vertical-align: middle; }
+    .score-fill { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), #fbbf24); border-radius: 2px; }
+    .score-value { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: var(--gold); margin-left: 4px; }
+    .pagination { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border); margin-top: 12px; }
+    .page-info { font-size: 11px; color: var(--text-muted); }
+    .page-buttons { display: flex; gap: 3px; }
+    .page-btn { width: 28px; height: 28px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-secondary); color: var(--text-secondary); font-size: 11px; cursor: pointer; }
+    .page-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .page-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+    .run-indicator { display: none; align-items: center; gap: 6px; padding: 6px 10px; background: var(--fall-bg); border-radius: 6px; font-size: 11px; color: var(--fall); margin-top: 10px; }
+    .run-indicator.show { display: flex; }
+    .run-indicator .spinner { width: 12px; height: 12px; border: 2px solid var(--fall); border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+    .empty-state-icon { font-size: 32px; margin-bottom: 12px; }
+    .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+    .loading-text { font-size: 14px; color: var(--text-secondary); margin-top: 12px; }
+    .loading-spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+  </style>
+</head>
+<body>
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">正在加载数据...</div>
+  </div>
+
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M3.5 18.5l6-6 4 4L22 6.5"/><path d="M22 6.5h-5m5 0v5"/></svg></div>
+      Smart Stock Picker
+    </div>
+    <div class="header-date" id="headerDate">--</div>
+  </header>
+
+  <main class="main-layout">
+    <aside class="panel">
+      <div class="panel-section">
+        <div class="section-title">当前公式</div>
+        <div class="formula-header">
+          <div class="formula-avatar" id="headerAvatar">📈</div>
+          <div class="formula-info">
+            <div class="formula-name" id="headerName">RPS三线红</div>
+            <div class="formula-desc" id="headerDesc">RPS50>90 且 RPS120>90</div>
+          </div>
+        </div>
+        <div class="editor-box">
+          <div class="editor-content">
+            <textarea class="formula-textarea" id="formulaText" readonly>RPS50 > 90 AND RPS120 > 90</textarea>
+            <div class="editor-actions">
+              <button class="btn primary" id="runBtn">执行选股</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="section-title">公式列表</div>
+        <div class="formula-list" id="formulaList"></div>
+      </div>
+    </aside>
+
+    <section class="results-panel">
+      <div class="date-banner">
+        <div class="date-info">
+          <span class="date-main" id="dateMain">2026年6月8日</span>
+          <span class="date-weekday" id="dateWeekday">星期日</span>
+        </div>
+        <div class="date-status"><span class="status-dot"></span>交易日</div>
+      </div>
+      <div class="results-header">
+        <div class="results-title">
+          <span class="results-name" id="resultName">选股结果</span>
+          <span class="results-count" id="resultCount">0</span>
+        </div>
+        <div class="results-time" id="resultTime">2026-06-08</div>
+      </div>
+      <div class="content-area">
+        <div class="kline-section">
+          <div class="kline-header">
+            <div class="stock-info">
+              <span class="stock-name" id="klineName">--</span>
+              <span class="stock-code" id="klineCode">--</span>
+              <span class="stock-price" id="klinePrice">--</span>
+              <span class="stock-change up" id="klineChange">--</span>
+            </div>
+            <div class="kline-controls">
+              <button class="period-btn active" data-period="day">日线</button>
+              <button class="period-btn" data-period="week">周线</button>
+              <button class="period-btn" data-period="month">月线</button>
+            </div>
+          </div>
+          <div id="klineChart"></div>
+        </div>
+        <div class="stock-list-section">
+          <table class="stock-table">
+            <thead>
+              <tr>
+                <th style="width:40px">#</th>
+                <th>代码</th>
+                <th>名称</th>
+                <th>现价</th>
+                <th>涨跌幅</th>
+                <th>RPS50</th>
+                <th>RPS120</th>
+                <th>RPS250</th>
+                <th>评分</th>
+              </tr>
+            </thead>
+            <tbody id="stockTableBody">
+            </tbody>
+          </table>
+          <div class="pagination">
+            <div class="page-info" id="pageInfo">共 0 条</div>
+            <div class="page-buttons" id="pageButtons"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="formula-results.js"></script>
+  <script>
+    const API_BASE = 'http://127.0.0.1:8080/api';
+    const PAGE_SIZE = 10;
+    const MOCK_RESULTS = window.FORMULA_RESULTS || {};
+    const DEFAULT_FORMULAS = [
+      { id: 'B1', strategy_id: 'b1', icon: '📊', className: 'b1', name: 'B1-强势突破', desc: 'RPS50 > 85' },
+      { id: 'S2', strategy_id: 's2', icon: '🌙', className: 's2', name: 'S2-月线反转', desc: '站上年线 + 50日新高' },
+      { id: 'S3', strategy_id: 's3', icon: '📈', className: 's3', name: 'S3-RPS三线红', desc: 'RPS50>90 且 RPS120>93 且 RPS250>95' },
+      { id: 'KD1', strategy_id: 'kd1', icon: '⚡', className: 'kd1', name: 'KD1战法', desc: '任一RPS > 95' },
+    ];
+
+    let formulaCatalog = [];
+    let currentFormula = 'S3';
+    let currentPage = 1;
+    let totalCount = 0;
+    let pageStocks = [];
+    let selectedStock = null;
+    let chart = null;
+    let candleSeries = null;
+    let volumeSeries = null;
+    let currentDataSource = 'server';
+    let selectedPeriod = 'day';
+    let emptyStateMessage = '暂无数据';
+    const klineCache = new Map();
+    let activeKlineRequestId = 0;
+    let selectedRowIndex = -1;
+
+    function currentDateParts() {
+      const now = new Date();
+      const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+      return {
+        iso: now.toISOString().slice(0, 10),
+        label: now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }),
+        weekday: days[now.getDay()],
+      };
+    }
+
+    function apiUrl(path) {
+      return API_BASE.replace(/\/$/, '') + path;
+    }
+
+    async function apiRequest(path, options = {}) {
+      const response = await fetch(apiUrl(path), {
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+        ...options,
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(text || ('HTTP ' + response.status));
+      }
+      return response.json();
+    }
+
+    async function fetchTemplateSummary() {
+      const summary = await apiRequest('/stocks/template-summary');
+      return new Map((summary || []).map(item => [Number(item.template_id), item]));
+    }
+
+    function normalizeMockStock(item) {
+      const change = Number(item.change ?? 0);
+      const changePct = Number(item.change_pct ?? item.change ?? 0);
+      return {
+        code: String(item.code || ''),
+        name: String(item.name || ''),
+        price: Number(item.price ?? 0),
+        change: Number.isFinite(change) ? change : 0,
+        change_pct: Number.isFinite(changePct) ? changePct : 0,
+        rps50: Number(item.rps50 ?? 0),
+        rps120: Number(item.rps120 ?? 0),
+        rps250: Number(item.rps250 ?? 0),
+      };
+    }
+
+    function getFormulaMeta(key) {
+      return DEFAULT_FORMULAS.find(item => item.id === key) || DEFAULT_FORMULAS[2];
+    }
+
+    function fallbackFormulaCatalog() {
+      return DEFAULT_FORMULAS.map(item => {
+        const rows = MOCK_RESULTS[item.id] || [];
+        return {
+          ...item,
+          templateId: null,
+          count: rows.length,
+          expression: item.desc,
+        };
+      });
+    }
+
+    function updateDate() {
+      const parts = currentDateParts();
+      document.getElementById('headerDate').textContent = parts.iso + ' 真实数据';
+      document.getElementById('dateMain').textContent = parts.label;
+      document.getElementById('dateWeekday').textContent = parts.weekday;
+      document.getElementById('resultTime').textContent = parts.iso;
+    }
+
+    function initChart() {
+      const container = document.getElementById('klineChart');
+      chart = LightweightCharts.createChart(container, {
+        layout: { background: { color: '#f0f2f5' }, textColor: '#5c6370' },
+        grid: { vertLines: { color: '#e2e5eb' }, horzLines: { color: '#e2e5eb' } },
+        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+        rightPriceScale: { borderColor: '#e2e5eb' },
+        timeScale: {
+          borderColor: '#e2e5eb',
+          timeVisible: false,
+          secondsVisible: false,
+          tickMarkMaxCharacterLength: 14,
+        },
+        localization: {
+          locale: 'zh-CN',
+          dateFormat: 'yyyy年MM月dd日',
+          timeFormatter: formatChartDateLabel,
+        },
+        handleScroll: {
+          mouseWheel: false,
+          pressedMouseMove: true,
+          horzTouchDrag: true,
+          vertTouchDrag: false,
+        },
+        handleScale: {
+          mouseWheel: true,
+          pinch: true,
+          axisPressedMouseMove: true,
+          axisDoubleClick: true,
+        },
+      });
+      candleSeries = chart.addCandlestickSeries({
+        upColor: '#ef4444',
+        downColor: '#22c55e',
+        borderUpColor: '#ef4444',
+        borderDownColor: '#22c55e',
+        wickUpColor: '#ef4444',
+        wickDownColor: '#22c55e',
+      });
+      volumeSeries = chart.addHistogramSeries({
+        color: '#26a69a',
+        priceFormat: { type: 'volume' },
+        priceScaleId: '',
+      });
+      volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+      window.addEventListener('resize', () => chart.applyOptions({ width: container.clientWidth }));
+    }
+
+    function renderFormulaList() {
+      const container = document.getElementById('formulaList');
+      container.innerHTML = formulaCatalog.map(item => {
+        const active = currentFormula === item.id ? ' active' : '';
+        const countText = Number.isFinite(item.count) ? (item.count + ' 只') : '未加载';
+        return '<div class="formula-item' + active + '" data-key="' + item.id + '">' +
+          '<div class="formula-icon ' + item.className + '">' + item.icon + '</div>' +
+          '<div class="formula-item-info">' +
+            '<div class="formula-item-name">' + item.name + '</div>' +
+            '<div class="formula-item-count">' + countText + '</div>' +
+          '</div>' +
+          '<span class="strategy-tag ' + item.className + '">' + item.id + '</span>' +
+        '</div>';
+      }).join('');
+    }
+
+    function formatPrice(value) {
+      return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatChangePct(value) {
+      const v = Number(value || 0);
+      const sign = v >= 0 ? '+' : '';
+      return sign + v.toFixed(2) + '%';
+    }
+
+    function renderStocks() {
+      const tbody = document.getElementById('stockTableBody');
+      const start = (currentPage - 1) * PAGE_SIZE;
+
+      if (!pageStocks.length) {
+        selectedRowIndex = -1;
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><div class="empty-state-icon">📊</div>' + emptyStateMessage + '</td></tr>';
+        document.getElementById('pageInfo').textContent = '共 0 条';
+        document.getElementById('pageButtons').innerHTML = '';
+        return;
+      }
+
+      tbody.innerHTML = pageStocks.map((stock, index) => {
+        const isSelected = index === selectedRowIndex;
+        const score = Math.round(((stock.rps50 || 0) + (stock.rps120 || 0) + (stock.rps250 || 0)) / 3);
+        return '<tr class="' + (isSelected ? 'selected' : '') + '" data-index="' + index + '">' +
+          '<td>' + (start + index + 1) + '</td>' +
+          '<td class="td-code">' + stock.code + '</td>' +
+          '<td>' + stock.name + '</td>' +
+          '<td class="td-price">' + formatPrice(stock.price) + '</td>' +
+          '<td><span class="td-change ' + (Number(stock.change_pct || 0) >= 0 ? 'up' : 'down') + '">' + formatChangePct(stock.change_pct) + '</span></td>' +
+          '<td class="td-metric">' + Number(stock.rps50 || 0).toFixed(1) + '</td>' +
+          '<td class="td-metric">' + Number(stock.rps120 || 0).toFixed(1) + '</td>' +
+          '<td class="td-metric">' + Number(stock.rps250 || 0).toFixed(1) + '</td>' +
+          '<td><span class="score-bar"><span class="score-fill" style="width:' + Math.max(0, Math.min(score, 100)) + '%"></span></span><span class="score-value">' + score + '</span></td>' +
+        '</tr>';
+      }).join('');
+
+      renderPagination();
+    }
+
+    function renderPagination() {
+      const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+      const start = totalCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+      const end = Math.min(currentPage * PAGE_SIZE, totalCount);
+      document.getElementById('pageInfo').textContent = totalCount ? ('显示 ' + start + '-' + end + ' 条，共 ' + totalCount + ' 条') : '共 0 条';
+
+      const buttons = [];
+      const maxButtons = 5;
+      const half = Math.floor(maxButtons / 2);
+      let begin = Math.max(1, currentPage - half);
+      let finish = Math.min(totalPages, begin + maxButtons - 1);
+      begin = Math.max(1, finish - maxButtons + 1);
+
+      if (begin > 1) {
+        buttons.push('<button class="page-btn" data-page="1">1</button>');
+        if (begin > 2) buttons.push('<span style="padding: 0 8px;">...</span>');
+      }
+
+      for (let page = begin; page <= finish; page++) {
+        buttons.push('<button class="page-btn' + (page === currentPage ? ' active' : '') + '" data-page="' + page + '">' + page + '</button>');
+      }
+
+      if (finish < totalPages) {
+        if (finish < totalPages - 1) buttons.push('<span style="padding: 0 8px;">...</span>');
+        buttons.push('<button class="page-btn" data-page="' + totalPages + '">' + totalPages + '</button>');
+      }
+
+      document.getElementById('pageButtons').innerHTML = buttons.join('');
+    }
+
+    function updateSelectedRow(nextIndex) {
+      if (selectedRowIndex === nextIndex) return;
+      const tbody = document.getElementById('stockTableBody');
+      const prevRow = tbody.querySelector('tr.selected');
+      if (prevRow) prevRow.classList.remove('selected');
+      const nextRow = tbody.querySelector('tr[data-index="' + nextIndex + '"]');
+      if (nextRow) nextRow.classList.add('selected');
+      selectedRowIndex = nextIndex;
+    }
+
+    function clearSelection() {
+      selectedStock = null;
+      selectedRowIndex = -1;
+      document.getElementById('klineName').textContent = '--';
+      document.getElementById('klineCode').textContent = '--';
+      document.getElementById('klinePrice').textContent = '--';
+      document.getElementById('klineChange').textContent = '--';
+      document.getElementById('klineChange').className = 'stock-change up';
+      if (candleSeries) candleSeries.setData([]);
+      if (volumeSeries) volumeSeries.setData([]);
+    }
+
+    function renderKlineUnavailable(message) {
+      if (candleSeries) candleSeries.setData([]);
+      if (volumeSeries) volumeSeries.setData([]);
+      document.getElementById('klineName').textContent = message || '暂无K线';
+      document.getElementById('klineCode').textContent = '';
+    }
+
+    function showLoadError(message, formulaMeta) {
+      currentDataSource = 'server';
+      totalCount = 0;
+      currentPage = 1;
+      pageStocks = [];
+      emptyStateMessage = message || '加载失败，请稍后重试';
+      updateHeader(
+        formulaMeta || getFormulaMeta(currentFormula),
+        (formulaMeta && formulaMeta.name) || getFormulaMeta(currentFormula).name,
+        (formulaMeta && formulaMeta.desc) || getFormulaMeta(currentFormula).desc,
+        (formulaMeta && formulaMeta.desc) || getFormulaMeta(currentFormula).desc,
+      );
+      document.getElementById('resultCount').textContent = '0';
+      document.getElementById('resultTime').textContent = '加载失败';
+      renderFormulaList();
+      renderStocks();
+      renderKlineUnavailable('K线未加载');
+    }
+
+    function updateHeader(formulaMeta, title, desc, codeText) {
+      document.getElementById('headerAvatar').textContent = formulaMeta.icon;
+      document.getElementById('headerName').textContent = title;
+      document.getElementById('headerDesc').textContent = desc;
+      document.getElementById('formulaText').value = codeText;
+      document.getElementById('resultName').textContent = title;
+    }
+
+    async function loadFormulaCatalog() {
+      try {
+        const templates = await apiRequest('/formula/templates');
+        const usable = templates
+          .filter(item => ['b1', 's2', 's3', 'kd1'].includes(String(item.strategy_id || '').toLowerCase()))
+          .map(item => {
+            const key = String(item.strategy_id || '').toUpperCase();
+            const meta = getFormulaMeta(key);
+            const mockCount = (MOCK_RESULTS[key] || []).length;
+            return {
+              id: key,
+              strategy_id: item.strategy_id,
+              templateId: item.id,
+              name: item.name || meta.name,
+              desc: item.description || meta.desc,
+              expression: item.expression || '',
+              icon: meta.icon,
+              className: meta.className,
+              count: mockCount || NaN,
+            };
+          });
+        const summaryByTemplateId = await fetchTemplateSummary();
+        formulaCatalog = usable.map((item, index) => ({
+          ...item,
+          count: summaryByTemplateId.has(Number(item.templateId))
+            ? Number(summaryByTemplateId.get(Number(item.templateId)).total || 0)
+            : item.count,
+        }));
+        formulaCatalog = formulaCatalog.length ? formulaCatalog : fallbackFormulaCatalog();
+        currentDataSource = 'server';
+      } catch (error) {
+        formulaCatalog = fallbackFormulaCatalog();
+        currentDataSource = 'mock';
+      }
+    }
+
+    async function loadServerResults(key, page) {
+      const formulaMeta = getFormulaMeta(key);
+      const catalogItem = formulaCatalog.find(item => item.id === key);
+      selectedStock = null;
+      selectedRowIndex = -1;
+      const payload = {
+        markets: [],
+        industries: [],
+        concepts: [],
+        keyword: '',
+        filters: { include_st: false, exclude_suspended: true },
+        formula: '',
+        template_id: catalogItem ? catalogItem.templateId : null,
+        template_params: {},
+        sort_by: 'change_pct',
+        sort_order: 'desc',
+        page: page,
+        page_size: PAGE_SIZE,
+      };
+
+      const result = await apiRequest('/stocks/template-results', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
+      const items = (result.items || []).map(normalizeMockStock);
+
+      currentDataSource = 'server';
+      currentPage = result.page || page;
+      totalCount = result.total || 0;
+      pageStocks = items;
+      emptyStateMessage = '暂无数据';
+      formulaCatalog = formulaCatalog.map(item => (
+        item.id === key ? { ...item, count: totalCount } : item
+      ));
+      updateHeader(
+        formulaMeta,
+        (result.applied_template && result.applied_template.name) || formulaMeta.name,
+        (result.applied_template && result.applied_template.description) || formulaMeta.desc,
+        (result.applied_template && result.applied_template.expression) || formulaMeta.desc,
+      );
+      document.getElementById('resultCount').textContent = String(totalCount);
+      document.getElementById('resultTime').textContent = result.date || currentDateParts().iso;
+      renderFormulaList();
+      renderStocks();
+      queueInitialStockSelection();
+    }
+
+    function loadMockResults(key, page) {
+      const formulaMeta = getFormulaMeta(key);
+      const allItems = (MOCK_RESULTS[key] || []).map(normalizeMockStock);
+      selectedStock = null;
+      selectedRowIndex = -1;
+      currentDataSource = 'mock';
+      currentPage = page;
+      totalCount = allItems.length;
+      emptyStateMessage = '暂无示例数据';
+      const start = (page - 1) * PAGE_SIZE;
+      pageStocks = allItems.slice(start, start + PAGE_SIZE);
+      updateHeader(formulaMeta, formulaMeta.name, formulaMeta.desc, formulaMeta.desc);
+      document.getElementById('resultCount').textContent = String(totalCount);
+      document.getElementById('resultTime').textContent = currentDateParts().iso + ' 示例';
+      renderFormulaList();
+      renderStocks();
+      queueInitialStockSelection();
+    }
+
+    async function loadResults(key = currentFormula, page = 1) {
+      currentFormula = key;
+      document.getElementById('runBtn').disabled = true;
+      try {
+        const useMockCatalog = formulaCatalog.length > 0 && formulaCatalog.every(item => !item.templateId);
+        if (useMockCatalog) {
+          loadMockResults(key, page);
+        } else {
+          await loadServerResults(key, page);
+        }
+      } catch (error) {
+        showLoadError('真实数据加载失败，请稍后重试', getFormulaMeta(key));
+      } finally {
+        document.getElementById('runBtn').disabled = false;
+      }
+    }
+
+    async function changePage(page) {
+      if (page === currentPage || page < 1) return;
+      if (currentDataSource === 'server') {
+        await loadResults(currentFormula, page);
+        return;
+      }
+      loadMockResults(currentFormula, page);
+    }
+
+    async function runScreen() {
+      const btn = document.getElementById('runBtn');
+      btn.disabled = true;
+      btn.textContent = '执行中...';
+      try {
+        await loadResults(currentFormula, 1);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '执行选股';
+      }
+    }
+
+    function aggregateKlineData(rows, period) {
+      const source = Array.isArray(rows) ? rows : [];
+      if (period === 'day') return source;
+
+      const grouped = [];
+      const bucketMap = new Map();
+
+      source.forEach(item => {
+        const dateText = String(item.date || '').slice(0, 10);
+        if (!dateText) return;
+        const date = new Date(dateText + 'T00:00:00');
+        let bucketKey = '';
+        if (period === 'week') {
+          const day = date.getDay() || 7;
+          const monday = new Date(date);
+          monday.setDate(date.getDate() - day + 1);
+          bucketKey = formatLocalDate(monday);
+        } else {
+          bucketKey = dateText.slice(0, 7) + '-01';
+        }
+
+        if (!bucketMap.has(bucketKey)) {
+          const next = {
+            date: bucketKey,
+            open: Number(item.open || 0),
+            high: Number(item.high || 0),
+            low: Number(item.low || 0),
+            close: Number(item.close || 0),
+            volume: Number(item.volume || 0),
+          };
+          bucketMap.set(bucketKey, next);
+          grouped.push(next);
+          return;
+        }
+
+        const bucket = bucketMap.get(bucketKey);
+        bucket.high = Math.max(bucket.high, Number(item.high || 0));
+        bucket.low = Math.min(bucket.low, Number(item.low || 0));
+        bucket.close = Number(item.close || 0);
+        bucket.volume += Number(item.volume || 0);
+      });
+
+      return grouped;
+    }
+
+    function formatChartDateLabel(time) {
+      if (!time) return '';
+      if (typeof time === 'string') {
+        return time.slice(0, 10).replace(/-/g, '年').replace(/^(\d{4})年(\d{2})年(\d{2})$/, '$1年$2月$3日');
+      }
+      const year = Number(time.year || 0);
+      const month = String(Number(time.month || 0)).padStart(2, '0');
+      const day = String(Number(time.day || 0)).padStart(2, '0');
+      if (!year) return '';
+      return year + '年' + month + '月' + day + '日';
+    }
+
+    function formatLocalDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return year + '-' + month + '-' + day;
+    }
+
+    function toBusinessDay(dateValue) {
+      const dateText = String(dateValue || '').slice(0, 10);
+      const parts = dateText.split('-');
+      if (parts.length !== 3) return dateText;
+      return {
+        year: Number(parts[0]),
+        month: Number(parts[1]),
+        day: Number(parts[2]),
+      };
+    }
+
+    function renderKlineRows(rows) {
+      if (!candleSeries || !volumeSeries) return;
+      const candles = rows.map(item => ({
+        time: toBusinessDay(item.date),
+        open: Number(item.open || 0),
+        high: Number(item.high || 0),
+        low: Number(item.low || 0),
+        close: Number(item.close || 0),
+      }));
+      const volumes = rows.map(item => ({
+        time: toBusinessDay(item.date),
+        value: Number(item.volume || 0),
+        color: Number(item.close || 0) >= Number(item.open || 0) ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)',
+      }));
+      candleSeries.setData(candles);
+      volumeSeries.setData(volumes);
+      chart.timeScale().fitContent();
+    }
+
+    function renderKlineFromResponse(response, period) {
+      if (!response) return;
+      renderKlineRows(aggregateKlineData(response.data || [], period || selectedPeriod));
+    }
+
+    function queueInitialStockSelection() {
+      if (!pageStocks.length) {
+        clearSelection();
+        return;
+      }
+      const schedule = window.requestAnimationFrame || function(callback) { return setTimeout(callback, 0); };
+      schedule(() => selectStock(0));
+    }
+
+    async function updateKline(stock) {
+      if (!stock) return;
+      const requestId = ++activeKlineRequestId;
+      document.getElementById('klineName').textContent = stock.name;
+      document.getElementById('klineCode').textContent = stock.code;
+      document.getElementById('klinePrice').textContent = formatPrice(stock.price);
+      const changeEl = document.getElementById('klineChange');
+      changeEl.textContent = formatChangePct(stock.change_pct);
+      changeEl.className = 'stock-change ' + (Number(stock.change_pct || 0) >= 0 ? 'up' : 'down');
+
+      try {
+        const cacheKey = stock.code;
+        let response = klineCache.get(cacheKey);
+        if (!response) {
+          response = await apiRequest('/kline/' + encodeURIComponent(stock.code) + '?period=day');
+          klineCache.set(cacheKey, response);
+        }
+        if (requestId !== activeKlineRequestId || !selectedStock || selectedStock.code !== stock.code) return;
+        renderKlineFromResponse(response, selectedPeriod);
+      } catch (error) {
+        if (requestId !== activeKlineRequestId || !selectedStock || selectedStock.code !== stock.code) return;
+        renderKlineUnavailable('K线加载失败');
+      }
+    }
+
+    function selectStock(idx) {
+      const stock = pageStocks[idx];
+      if (!stock) return;
+      selectedStock = stock;
+      updateSelectedRow(idx);
+      void updateKline(stock);
+    }
+
+    async function bootstrap() {
+      document.getElementById('loadingOverlay').style.display = 'flex';
+      try {
+        updateDate();
+        initChart();
+        await loadFormulaCatalog();
+        renderFormulaList();
+        await loadResults(currentFormula, 1);
+      } catch (error) {
+        showLoadError('页面初始化失败，请稍后重试', getFormulaMeta(currentFormula));
+      } finally {
+        document.getElementById('loadingOverlay').style.display = 'none';
+      }
+    }
+
+    document.getElementById('runBtn').addEventListener('click', runScreen);
+    document.getElementById('formulaList').addEventListener('click', function(event) {
+      const item = event.target.closest('.formula-item[data-key]');
+      if (!item) return;
+      void loadResults(item.dataset.key, 1);
+    });
+    document.getElementById('stockTableBody').addEventListener('click', function(event) {
+      const row = event.target.closest('tr[data-index]');
+      if (!row) return;
+      selectStock(Number(row.dataset.index));
+    });
+    document.getElementById('pageButtons').addEventListener('click', function(event) {
+      const btn = event.target.closest('.page-btn[data-page]');
+      if (!btn) return;
+      void changePage(Number(btn.dataset.page));
+    });
+    document.querySelectorAll('.period-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        selectedPeriod = this.dataset.period || 'day';
+        if (selectedStock) updateKline(selectedStock);
+      });
+    });
+
+    bootstrap();
+  </script>
+</body>
+</html>

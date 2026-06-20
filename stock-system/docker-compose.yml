@@ -1,0 +1,74 @@
+# ============================================
+# Smart Stock Picker - Docker Compose
+# ============================================
+# 使用方法:
+#   docker compose up -d          # 后台启动
+#   docker compose up             # 前台启动（看日志）
+#   docker compose logs -f        # 查看日志
+#   docker compose down           # 停止并移除
+#   docker compose down -v        # 停止并清除数据卷（慎用）
+#
+# 首次启动会自动导入数据（约 5-10 分钟），
+# 后续启动会跳过初始化直接启动服务。
+#
+# 访问地址:
+#   前端:   http://localhost:80
+#   API:    http://localhost:80/api/
+#   Swagger: http://localhost:80/api/docs  (直连后端: http://localhost:8080/docs)
+
+services:
+  # ---- 后端: Python FastAPI ----
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: stock-picker-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      # 持久化数据库（SQLite）
+      - picker-data:/app/data
+      # 挂载通达信 .day 文件（只读，首次导入后不再需要）
+      - ./hsjday 2:/app/hsjday 2:ro
+      # 挂载股票池 JSON（只读）
+      - ./data/tencent_hs.json:/app/data/tencent_hs.json:ro
+    environment:
+      - PICKER_DB_DIR=/app/data
+      - PYTHONUNBUFFERED=1
+    networks:
+      - stock-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health/ready"]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 5
+
+  # ---- 前端: Vue 3 + Nginx ----
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: stock-picker-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - stock-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+
+networks:
+  stock-net:
+    driver: bridge
+
+volumes:
+  picker-data:
+    driver: local

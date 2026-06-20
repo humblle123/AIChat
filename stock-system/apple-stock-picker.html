@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockPick — 智能选股系统</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #F5F5F7;
+  --surface: #FFFFFF;
+  --text-primary: #1D1D1F;
+  --text-secondary: #86868B;
+  --text-tertiary: #AEAEB2;
+  --accent: #007AFF;
+  --accent-hover: #0056CC;
+  --green: #30D158;
+  --red: #FF453A;
+  --orange: #FF9F0A;
+  --border: rgba(0,0,0,0.06);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+}
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Nav */
+.nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-inner {
+  max-width: 1440px; margin: 0 auto; padding: 0 48px;
+  height: 52px; display: flex; align-items: center; justify-content: space-between;
+}
+.nav-brand { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; color: var(--text-primary); text-decoration: none; }
+.nav-tabs { display: flex; gap: 32px; list-style: none; }
+.nav-tab {
+  font-size: 13px; font-weight: 400; color: var(--text-secondary);
+  cursor: pointer; padding: 4px 0; border-bottom: 1.5px solid transparent;
+  transition: all 0.2s ease; user-select: none;
+}
+.nav-tab:hover { color: var(--text-primary); }
+.nav-tab.active { color: var(--text-primary); font-weight: 500; border-bottom-color: var(--accent); }
+.nav-actions { display: flex; align-items: center; gap: 16px; }
+.search-input {
+  width: 180px; height: 32px; padding: 0 12px 0 32px; border: none; border-radius: 8px;
+  background: rgba(118,118,128,0.12); font-size: 13px; outline: none; transition: all 0.2s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2386868B' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: 10px center;
+}
+.search-input:focus { width: 220px; background-color: rgba(118,118,128,0.16); }
+.mobile-nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: 4px; }
+
+/* Main */
+.main { max-width: 1440px; margin: 0 auto; padding: 32px 48px 80px; }
+.section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; }
+.section-title { font-size: 28px; font-weight: 600; letter-spacing: -0.5px; }
+.section-subtitle { font-size: 15px; color: var(--text-secondary); font-weight: 400; }
+.section-link { font-size: 14px; color: var(--accent); text-decoration: none; font-weight: 500; }
+.section-link:hover { text-decoration: underline; }
+
+/* Market Cards */
+.market-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 40px; }
+.market-card {
+  background: var(--surface); border-radius: var(--radius-md); padding: 20px;
+  box-shadow: var(--shadow-sm); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;
+}
+.market-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.market-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.market-name { font-size: 13px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+.market-badge { font-size: 11px; padding: 2px 8px; border-radius: 100px; font-weight: 500; }
+.market-badge.up { background: rgba(48,209,88,0.12); color: var(--green); }
+.market-badge.down { background: rgba(255,69,58,0.12); color: var(--red); }
+.market-value { font-size: 32px; font-weight: 600; letter-spacing: -1px; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+.market-change { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.market-change.up { color: var(--green); }
+.market-change.down { color: var(--red); }
+
+.page-section { margin-bottom: 48px; }
+
+/* Formula */
+.formula-section { background: var(--surface); border-radius: var(--radius-lg); padding: 28px; box-shadow: var(--shadow-sm); margin-bottom: 40px; }
+.formula-title { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
+.formula-desc { font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
+.formula-editor {
+  background: var(--bg); border-radius: var(--radius-md); padding: 20px; margin-bottom: 20px;
+  font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; line-height: 1.8;
+  border: 1px solid var(--border); min-height: 110px;
+}
+.formula-tag {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 6px;
+  font-size: 12px; font-weight: 500; margin-right: 6px; margin-bottom: 8px;
+  cursor: pointer; transition: all 0.15s;
+}
+.formula-tag.fn { background: rgba(0,122,255,0.1); color: var(--accent); }
+.formula-tag.metric { background: rgba(48,209,88,0.1); color: var(--green); }
+.formula-tag.op { background: rgba(255,159,10,0.1); color: var(--orange); }
+.formula-tag:hover { opacity: 0.8; }
+
+.formula-actions { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 8px;
+  font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+  border: none; outline: none;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-secondary { background: rgba(118,118,128,0.12); color: var(--text-primary); }
+.btn-secondary:hover { background: rgba(118,118,128,0.18); }
+
+/* Stock Table */
+.stock-table-wrap { background: var(--surface); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
+.stock-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.stock-table thead { background: var(--bg); position: sticky; top: 52px; z-index: 10; }
+.stock-table th {
+  padding: 12px 20px; text-align: left; font-size: 12px; font-weight: 500;
+  color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.stock-table td { padding: 14px 20px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+.stock-table tr:last-child td { border-bottom: none; }
+.stock-table tr:hover td { background: rgba(0,0,0,0.015); }
+.stock-name-cell { display: flex; align-items: center; gap: 12px; }
+.stock-logo {
+  width: 36px; height: 36px; border-radius: 8px; display: flex;
+  align-items: center; justify-content: center; font-size: 12px;
+  font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.stock-info .name { font-size: 14px; font-weight: 500; }
+.stock-info .ticker { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+.price-up { color: var(--green); }
+.price-down { color: var(--red); }
+.sparkline { width: 80px; height: 32px; }
+.stock-score {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 24px; border-radius: 6px; font-size: 12px; font-weight: 600;
+}
+.score-high { background: rgba(48,209,88,0.12); color: var(--green); }
+.score-mid { background: rgba(255,159,10,0.12); color: var(--orange); }
+.score-low { background: rgba(255,69,58,0.12); color: var(--red); }
+
+/* Portfolio */
+.portfolio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.portfolio-card { background: var(--surface); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-sm); }
+.portfolio-stat-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+.portfolio-stat-value { font-size: 36px; font-weight: 600; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+.portfolio-stat-change { font-size: 14px; font-weight: 500; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+.portfolio-stat-change.up { color: var(--green); }
+.portfolio-stat-change.down { color: var(--red); }
+
+.two-col { display: grid; grid-template-columns: 1fr 380px; gap: 24px; }
+
+/* Chart */
+.chart-placeholder { width: 100%; height: 240px; background: var(--bg); border-radius: var(--radius-md); overflow: hidden; }
+.chart-svg { width: 100%; height: 100%; padding: 20px; }
+
+/* Holdings */
+.holdings-list { background: var(--surface); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
+.holding-item { display: flex; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--border); gap: 16px; }
+.holding-item:last-child { border-bottom: none; }
+.holding-logo {
+  width: 40px; height: 40px; border-radius: 10px; display: flex;
+  align-items: center; justify-content: center; font-size: 13px;
+  font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.holding-info { flex: 1; min-width: 0; }
+.holding-info .name { font-size: 15px; font-weight: 500; }
+.holding-info .meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.holding-value { text-align: right; flex-shrink: 0; }
+.holding-value .amount { font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.holding-value .pnl { font-size: 13px; font-weight: 500; margin-top: 2px; }
+.holding-bar-wrap { width: 120px; flex-shrink: 0; }
+.holding-bar { height: 4px; border-radius: 2px; background: var(--bg); overflow: hidden; }
+.holding-bar-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+
+/* Tabs */
+.tab-group {
+  display: flex; gap: 4px; background: rgba(118,118,128,0.12);
+  border-radius: 8px; padding: 3px; width: fit-content;
+}
+.tab-item {
+  padding: 5px 14px; font-size: 13px; font-weight: 500; border-radius: 6px;
+  cursor: pointer; color: var(--text-secondary); transition: all 0.15s; user-select: none;
+}
+.tab-item.active { background: var(--surface); color: var(--text-primary); box-shadow: var(--shadow-sm); }
+
+/* Sidebar */
+.sidebar-card { background: var(--surface); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-sm); }
+.sidebar-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.alert-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.alert-item:last-child { border-bottom: none; }
+.alert-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+.alert-dot.green { background: var(--green); }
+.alert-dot.orange { background: var(--orange); }
+.alert-dot.red { background: var(--red); }
+.alert-text { font-size: 13px; color: var(--text-primary); line-height: 1.5; }
+.alert-time { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; }
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .two-col { grid-template-columns: 1fr; }
+  .market-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .nav-inner { padding: 0 20px; }
+  .nav-tabs { gap: 20px; }
+  .main { padding: 24px 20px 60px; }
+  .section-title { font-size: 22px; }
+  .portfolio-grid { grid-template-columns: 1fr; }
+  .stock-table th:nth-child(4), .stock-table td:nth-child(4),
+  .stock-table th:nth-child(6), .stock-table td:nth-child(6) { display: none; }
+  .holding-bar-wrap { width: 80px; }
+}
+@media (max-width: 480px) {
+  .nav-tabs { display: none; }
+  .mobile-nav-toggle { display: block; }
+  .market-grid { grid-template-columns: 1fr; }
+  .portfolio-stat-value { font-size: 28px; }
+  .stock-table th:nth-child(3), .stock-table td:nth-child(3) { display: none; }
+  .holding-bar-wrap { display: none; }
+}
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.page-section { animation: fadeIn 0.5s ease backwards; }
+.page-section:nth-child(2) { animation-delay: 0.05s; }
+.page-section:nth-child(3) { animation-delay: 0.1s; }
+.page-section:nth-child(4) { animation-delay: 0.15s; }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="#">StockPick</a>
+    <ul class="nav-tabs">
+      <li class="nav-tab active" onclick="switchTab(this)">概览</li>
+      <li class="nav-tab" onclick="switchTab(this)">公式选股</li>
+      <li class="nav-tab" onclick="switchTab(this)">投资组合</li>
+      <li class="nav-tab" onclick="switchTab(this)">行情</li>
+    </ul>
+    <div class="nav-actions">
+      <input class="search-input" type="text" placeholder="搜索股票、代码…" />
+      <button class="mobile-nav-toggle" aria-label="菜单">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="main">
+
+  <!-- Market Overview -->
+  <section class="page-section">
+    <div class="section-header">
+      <div>
+        <h1 class="section-title">市场概览</h1>
+        <p class="section-subtitle">实时追踪核心指数 · 2026年6月10日</p>
+      </div>
+      <div class="tab-group">
+        <div class="tab-item active" onclick="switchMarketTab(this,'a')">A股</div>
+        <div class="tab-item" onclick="switchMarketTab(this,'us')">美股</div>
+      </div>
+    </div>
+    <div class="market-grid" id="marketGrid"></div>
+  </section>
+
+  <!-- Formula Builder -->
+  <section class="page-section">
+    <div class="formula-section">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+        <div>
+          <h2 class="formula-title">公式选股</h2>
+          <p class="formula-desc">用自定义公式筛选符合条件的股票</p>
+        </div>
+        <button class="btn btn-secondary">帮助</button>
+      </div>
+      <div style="margin-bottom:16px;">
+        <span class="formula-tag fn">ROE()</span>
+        <span class="formula-tag fn">PE()</span>
+        <span class="formula-tag fn">PB()</span>
+        <span class="formula-tag fn">MA()</span>
+        <span class="formula-tag fn">MACD()</span>
+        <span class="formula-tag metric">净利润增长</span>
+        <span class="formula-tag metric">毛利率</span>
+        <span class="formula-tag metric">营收增速</span>
+        <span class="formula-tag op">AND</span>
+        <span class="formula-tag op">OR</span>
+        <span class="formula-tag op">NOT</span>
+      </div>
+      <div class="formula-editor" contenteditable="true" spellcheck="false">ROE() &gt; 15<br>AND 净利润增长 &gt; 20<br>AND PE() &lt; 30<br>AND 毛利率 &gt; 40</div>
+      <div class="formula-actions">
+        <button class="btn btn-primary" onclick="runFormula(this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5,3 19,12 5,21"/></svg>
+          运行选股
+        </button>
+        <button class="btn btn-secondary">保存公式</button>
+        <button class="btn btn-secondary">历史公式</button>
+        <span style="margin-left:auto; font-size:13px; color:var(--text-secondary);">上次运行：找到 <strong style="color:var(--text-primary)">23</strong> 只股票</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stock Results -->
+  <section class="page-section">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">选股结果</h2>
+        <p class="section-subtitle">基于当前公式筛选 · 共 23 只</p>
+      </div>
+      <a class="section-link" href="#">查看全部</a>
+    </div>
+    <div class="stock-table-wrap">
+      <table class="stock-table">
+        <thead>
+          <tr>
+            <th>股票</th>
+            <th>最新价</th>
+            <th>涨跌幅</th>
+            <th>ROE</th>
+            <th>PE</th>
+            <th>净利润增速</th>
+            <th>评分</th>
+            <th>趋势</th>
+          </tr>
+        </thead>
+        <tbody id="stockTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Portfolio -->
+  <section class="page-section">
+    <div class="section-header">
+      <h2 class="section-title">投资组合</h2>
+      <a class="section-link" href="#">管理组合</a>
+    </div>
+    <div class="portfolio-grid">
+      <div class="portfolio-card">
+        <div class="portfolio-stat-label">总资产</div>
+        <div class="portfolio-stat-value">¥ 428,561</div>
+        <div class="portfolio-stat-change up">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14l5-5 5 5H7z"/></svg>
+          +2.38% 今日
+        </div>
+      </div>
+      <div class="portfolio-card">
+        <div class="portfolio-stat-label">累计收益</div>
+        <div class="portfolio-stat-value" style="color:var(--green)">+¥ 86,412</div>
+        <div class="portfolio-stat-change up">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14l5-5 5 5H7z"/></svg>
+          +25.21% 总回报
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="portfolio-card" style="margin-bottom:24px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+            <span style="font-size:15px; font-weight:600;">收益走势</span>
+            <div class="tab-group">
+              <div class="tab-item" onclick="switchPeriod(this)">1周</div>
+              <div class="tab-item" onclick="switchPeriod(this)">1月</div>
+              <div class="tab-item active" onclick="switchPeriod(this)">3月</div>
+              <div class="tab-item" onclick="switchPeriod(this)">1年</div>
+              <div class="tab-item" onclick="switchPeriod(this)">全部</div>
+            </div>
+          </div>
+          <div class="chart-placeholder">
+            <svg class="chart-svg" viewBox="0 0 600 200" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#007AFF" stop-opacity="0.15"/>
+                  <stop offset="100%" stop-color="#007AFF" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,160 C40,150 80,145 120,130 C160,115 200,100 240,85 C280,75 320,90 360,70 C400,55 440,45 480,40 C520,35 560,25 600,18 L600,200 L0,200 Z" fill="url(#chartGrad)"/>
+              <path d="M0,160 C40,150 80,145 120,130 C160,115 200,100 240,85 C280,75 320,90 360,70 C400,55 440,45 480,40 C520,35 560,25 600,18" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="600" cy="18" r="4" fill="#007AFF"/>
+            </svg>
+          </div>
+        </div>
+        <div class="holdings-list">
+          <div class="holding-item">
+            <div class="holding-logo" style="background:#1D1D1F;">茅台</div>
+            <div class="holding-info"><div class="name">贵州茅台</div><div class="meta">600519.SH · 持有 50 股</div></div>
+            <div class="holding-value"><div class="amount">¥ 98,620</div><div class="pnl price-up">+12.34%</div></div>
+            <div class="holding-bar-wrap"><div class="holding-bar"><div class="holding-bar-fill" style="width:85%; background:var(--green);"></div></div></div>
+          </div>
+          <div class="holding-item">
+            <div class="holding-logo" style="background:#E63946;">宁德</div>
+            <div class="holding-info"><div class="name">宁德时代</div><div class="meta">300750.SZ · 持有 200 股</div></div>
+            <div class="holding-value"><div class="amount">¥ 76,240</div><div class="pnl price-up">+8.56%</div></div>
+            <div class="holding-bar-wrap"><div class="holding-bar"><div class="holding-bar-fill" style="width:68%; background:var(--green);"></div></div></div>
+          </div>
+          <div class="holding-item">
+            <div class="holding-logo" style="background:#007AFF;">AAPL</div>
+            <div class="holding-info"><div class="name">Apple Inc.</div><div class="meta">AAPL · 持有 80 股</div></div>
+            <div class="holding-value"><div class="amount">¥ 68,920</div><div class="pnl price-up">+18.22%</div></div>
+            <div class="holding-bar-wrap"><div class="holding-bar"><div class="holding-bar-fill" style="width:62%; background:var(--green);"></div></div></div>
+          </div>
+          <div class="holding-item">
+            <div class="holding-logo" style="background:#FF9F0A;">腾讯</div>
+            <div class="holding-info"><div class="name">腾讯控股</div><div class="meta">0700.HK · 持有 300 股</div></div>
+            <div class="holding-value"><div class="amount">¥ 62,100</div><div class="pnl price-down">-3.18%</div></div>
+            <div class="holding-bar-wrap"><div class="holding-bar"><div class="holding-bar-fill" style="width:55%; background:var(--red);"></div></div></div>
+          </div>
+          <div class="holding-item">
+            <div class="holding-logo" style="background:#30D158;">NVDA</div>
+            <div class="holding-info"><div class="name">NVIDIA Corp.</div><div class="meta">NVDA · 持有 45 股</div></div>
+            <div class="holding-value"><div class="amount">¥ 58,430</div><div class="pnl price-up">+42.87%</div></div>
+            <div class="holding-bar-wrap"><div class="holding-bar"><div class="holding-bar-fill" style="width:95%; background:var(--green);"></div></div></div>
+          </div>
+          <div class="holding-item">
+            <div class="holding-logo" style="background:#8E8E93;">比亚</div>
+            <div class="holding-info"><div class="name">比亚迪</div><div class="meta">002594.SZ · 持有 100 股</div></div>
+            <div class="holding-value"><div class="amount">¥ 64,251</div><div class="pnl price-up">+6.72%</div></div>
+            <div class="holding-bar-wrap"><div class="holding-bar"><div class="holding-bar-fill" style="width:60%; background:var(--green);"></div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sidebar-card" style="margin-bottom:16px;">
+          <div class="sidebar-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            智能提醒
+          </div>
+          <div class="alert-item">
+            <span class="alert-dot green"></span>
+            <span class="alert-text">贵州茅台突破 2000 元关口，符合你的公式条件</span>
+            <div class="alert-time">10 分钟前</div>
+          </div>
+          <div class="alert-item">
+            <span class="alert-dot orange"></span>
+            <span class="alert-text">宁德时代 PE 降至 22，接近你设定的买入阈值</span>
+            <div class="alert-time">1 小时前</div>
+          </div>
+          <div class="alert-item">
+            <span class="alert-dot green"></span>
+            <span class="alert-text">NVIDIA 发布 Q2 财报，EPS 超预期 15%</span>
+            <div class="alert-time">3 小时前</div>
+          </div>
+          <div class="alert-item">
+            <span class="alert-dot red"></span>
+            <span class="alert-text">腾讯控股连续 3 日下跌，累计跌幅 -5.2%</span>
+            <div class="alert-time">昨日</div>
+          </div>
+          <div class="alert-item">
+            <span class="alert-dot green"></span>
+            <span class="alert-text">比亚迪海外销量创新高，6月同比 +68%</span>
+            <div class="alert-time">昨日</div>
+          </div>
+        </div>
+        <div class="sidebar-card">
+          <div class="sidebar-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+            推荐公式
+          </div>
+          <div class="alert-item">
+            <div class="alert-text" style="font-weight:500;">价值投资经典</div>
+            <div class="alert-time" style="margin-top:6px;">ROE > 20 AND PE < 25 AND 股息率 > 3</div>
+            <div class="alert-time">匹配 12 只股票</div>
+          </div>
+          <div class="alert-item">
+            <div class="alert-text" style="font-weight:500;">成长股猎手</div>
+            <div class="alert-time" style="margin-top:6px;">营收增速 > 30 AND 毛利率 > 50 AND 净利润增速 > 40</div>
+            <div class="alert-time">匹配 8 只股票</div>
+          </div>
+          <div class="alert-item">
+            <div class="alert-text" style="font-weight:500;">技术面共振</div>
+            <div class="alert-time" style="margin-top:6px;">MACD金叉 AND MA5 > MA20 AND 成交量 > 5日均量 × 2</div>
+            <div class="alert-time">匹配 19 只股票</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const marketData = {
+  a: [
+    { name: '上证综指', value: '3,456.78', change: '+1.23%', up: true },
+    { name: '深证成指', value: '11,234.56', change: '+0.87%', up: true },
+    { name: '创业板指', value: '2,234.89', change: '-0.45%', up: false },
+    { name: '科创50', value: '987.32', change: '+2.11%', up: true },
+  ],
+  us: [
+    { name: 'S&P 500', value: '5,892.45', change: '+0.56%', up: true },
+    { name: 'NASDAQ', value: '19,234.12', change: '+1.12%', up: true },
+    { name: '道琼斯', value: '42,567.89', change: '-0.23%', up: false },
+    { name: 'Russell 2000', value: '2,123.45', change: '+0.78%', up: true },
+  ]
+};
+
+function renderMarket(type) {
+  const grid = document.getElementById('marketGrid');
+  grid.innerHTML = marketData[type].map(m => `
+    <div class="market-card">
+      <div class="market-card-header">
+        <span class="market-name">${m.name}</span>
+        <span class="market-badge ${m.up ? 'up' : 'down'}">${m.up ? '↑' : '↓'}</span>
+      </div>
+      <div class="market-value">${m.value}</div>
+      <div class="market-change ${m.up ? 'up' : 'down'}">${m.change}</div>
+    </div>
+  `).join('');
+}
+
+const stocks = [
+  { name: '贵州茅台', ticker: '600519.SH', price: '1,972.40', change: '+2.34%', up: true, roe: '32.1', pe: '24.8', growth: '+18.5%', score: 96, color: '#1D1D1F' },
+  { name: '宁德时代', ticker: '300750.SZ', price: '381.20', change: '+1.56%', up: true, roe: '21.8', pe: '22.3', growth: '+25.7%', score: 92, color: '#E63946' },
+  { name: '比亚迪', ticker: '002594.SZ', price: '642.51', change: '+0.89%', up: true, roe: '18.6', pe: '28.4', growth: '+42.1%', score: 89, color: '#8E8E93' },
+  { name: '迈瑞医疗', ticker: '300760.SZ', price: '287.60', change: '-0.34%', up: false, roe: '28.9', pe: '31.2', growth: '+22.3%', score: 87, color: '#007AFF' },
+  { name: '海康威视', ticker: '002415.SZ', price: '34.78', change: '+1.12%', up: true, roe: '22.4', pe: '19.6', growth: '+15.8%', score: 85, color: '#30D158' },
+  { name: '恒瑞医药', ticker: '600276.SH', price: '48.92', change: '+3.21%', up: true, roe: '16.3', pe: '42.1', growth: '+35.6%', score: 82, color: '#FF9F0A' },
+  { name: '隆基绿能', ticker: '601012.SH', price: '22.45', change: '-1.23%', up: false, roe: '15.7', pe: '12.8', growth: '+28.9%', score: 78, color: '#FF453A' },
+];
+
+function renderStocks() {
+  const tbody = document.getElementById('stockTableBody');
+  tbody.innerHTML = stocks.map(s => {
+    const scoreClass = s.score >= 85 ? 'score-high' : s.score >= 70 ? 'score-mid' : 'score-low';
+    const sparkColor = s.up ? '#30D158' : '#FF453A';
+    const sparkPath = s.up
+      ? 'M0,24 C10,22 20,18 30,15 C40,12 50,8 60,6 C65,5 70,3 80,2'
+      : 'M0,4 C10,6 20,10 30,14 C40,18 50,20 60,22 C65,23 70,25 80,26';
+    return `
+      <tr>
+        <td>
+          <div class="stock-name-cell">
+            <div class="stock-logo" style="background:${s.color};">${s.name.slice(0,2)}</div>
+            <div class="stock-info"><div class="name">${s.name}</div><div class="ticker">${s.ticker}</div></div>
+          </div>
+        </td>
+        <td style="font-weight:500;">¥ ${s.price}</td>
+        <td class="${s.up ? 'price-up' : 'price-down'}" style="font-weight:500;">${s.change}</td>
+        <td>${s.roe}%</td>
+        <td>${s.pe}</td>
+        <td class="${s.growth.startsWith('+') ? 'price-up' : 'price-down'}">${s.growth}</td>
+        <td><span class="stock-score ${scoreClass}">${s.score}</span></td>
+        <td><svg class="sparkline" viewBox="0 0 80 32"><path d="${sparkPath}" fill="none" stroke="${sparkColor}" stroke-width="1.5" stroke-linecap="round"/></svg></td>
+      </tr>`;
+  }).join('');
+}
+
+function switchTab(el) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+function switchMarketTab(el, type) {
+  el.parentElement.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderMarket(type);
+}
+function switchPeriod(el) {
+  el.parentElement.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+function runFormula(btn) {
+  btn.style.transform = 'scale(0.96)';
+  setTimeout(() => { btn.style.transform = ''; }, 150);
+}
+
+renderMarket('a');
+renderStocks();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Stock Picker - 公式选股系统</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #f5f7fa;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #f0f2f5;
+      --bg-hover: #e8ebf0;
+      --text-primary: #1a1d23;
+      --text-secondary: #5c6370;
+      --text-muted: #9ca3af;
+      --border: #e2e5eb;
+      --border-light: #f0f1f3;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-dim: #eff6ff;
+      --rise: #ef4444;
+      --rise-bg: #fef2f2;
+      --fall: #22c55e;
+      --fall-bg: #f0fdf4;
+      --gold: #f59e0b;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    .header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 15px;
+    }
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo-icon svg { width: 16px; height: 16px; fill: white; }
+    .main-layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      height: calc(100vh - 56px);
+    }
+    .formula-panel {
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel-section {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-section:last-child {
+      border-bottom: none;
+      flex: 1;
+      overflow-y: auto;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .section-action {
+      font-size: 11px;
+      color: var(--accent);
+      cursor: pointer;
+    }
+    .formula-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .formula-avatar {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .formula-info { flex: 1; }
+    .formula-name { font-size: 14px; font-weight: 600; }
+    .formula-desc { font-size: 11px; color: var(--text-muted); }
+    .editor-box {
+      background: var(--bg-primary);
+      border-radius: 8px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .editor-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      padding: 0 12px;
+      background: var(--bg-tertiary);
+    }
+    .editor-tab {
+      padding: 10px 12px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      position: relative;
+    }
+    .editor-tab.active { color: var(--text-primary); }
+    .editor-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+    }
+    .editor-content { padding: 12px; }
+    .formula-textarea {
+      width: 100%;
+      min-height: 160px;
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1.7;
+      resize: vertical;
+    }
+    .formula-textarea:focus { outline: none; }
+    .editor-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .btn {
+      padding: 8px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      justify-content: center;
+    }
+    .btn:hover { background: var(--bg-tertiary); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+    .btn.primary:hover { background: var(--accent-hover); }
+    .btn.running { background: #22c55e; border-color: #22c55e; color: white; }
+    .btn svg { width: 14px; height: 14px; }
+    .formula-list { display: flex; flex-direction: column; gap: 8px; }
+    .formula-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .formula-item:hover { background: var(--bg-hover); }
+    .formula-item.active { background: var(--accent-dim); border-color: var(--accent); }
+    .formula-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    .formula-icon.preset { background: rgba(245, 158, 11, 0.15); }
+    .formula-icon.b1 { background: rgba(37, 99, 235, 0.15); }
+    .formula-icon.s2 { background: rgba(139, 92, 246, 0.15); }
+    .formula-icon.s3 { background: rgba(239, 68, 68, 0.15); }
+    .formula-icon.kd1 { background: rgba(34, 197, 94, 0.15); }
+    .formula-item-info { flex: 1; }
+    .formula-item-name { font-size: 13px; font-weight: 500; }
+    .formula-item-count { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+    .results-panel { display: flex; flex-direction: column; overflow: hidden; }
+    .date-banner {
+      background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+      color: white;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .date-info { display: flex; align-items: center; gap: 16px; }
+    .date-main { font-size: 18px; font-weight: 600; }
+    .date-weekday { font-size: 13px; opacity: 0.85; }
+    .date-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.15);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+    }
+    .status-dot-white {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .results-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .results-title { display: flex; align-items: center; gap: 12px; }
+    .results-name { font-size: 16px; font-weight: 600; }
+    .results-count {
+      background: var(--accent-dim);
+      color: var(--accent);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .results-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .results-content { flex: 1; overflow-y: auto; padding: 0 24px 24px; }
+    .stock-table {
+      width: 100%;
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .stock-table thead { background: var(--bg-tertiary); position: sticky; top: 0; }
+    .stock-table th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .stock-table th.sorted { color: var(--accent); }
+    .stock-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 13px;
+    }
+    .stock-table tbody tr { cursor: pointer; transition: background 0.1s; }
+    .stock-table tbody tr:hover { background: var(--bg-tertiary); }
+    .stock-table tbody tr:last-child td { border-bottom: none; }
+    .stock-code { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); }
+    .stock-price { font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+    .stock-change {
+      display: inline-flex;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .stock-change.up { background: var(--rise-bg); color: var(--rise); }
+    .stock-change.down { background: var(--fall-bg); color: var(--fall); }
+    .stock-metric { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-secondary); }
+    .stock-score { display: flex; align-items: center; gap: 8px; }
+    .score-bar { width: 50px; height: 4px; background: var(--bg-tertiary); border-radius: 2px; overflow: hidden; }
+    .score-fill { height: 100%; background: linear-gradient(90deg, var(--gold), #fbbf24); }
+    .score-value { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: var(--gold); }
+    .watch-btn { background: none; border: none; cursor: pointer; padding: 4px; color: var(--text-muted); }
+    .watch-btn:hover, .watch-btn.watched { color: var(--gold); }
+    .watch-btn svg { width: 18px; height: 18px; }
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      margin-top: 16px;
+    }
+    .page-info { font-size: 12px; color: var(--text-muted); }
+    .page-buttons { display: flex; gap: 4px; }
+    .page-btn {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .page-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .page-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+    .strategy-tag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      margin-left: 6px;
+    }
+    .strategy-tag.b1 { background: rgba(37, 99, 235, 0.15); color: #2563eb; }
+    .strategy-tag.s2 { background: rgba(139, 92, 246, 0.15); color: #7c3aed; }
+    .strategy-tag.s3 { background: rgba(239, 68, 68, 0.15); color: #dc2626; }
+    .strategy-tag.kd1 { background: rgba(34, 197, 94, 0.15); color: #16a34a; }
+    .strategy-tag.user { background: rgba(245, 158, 11, 0.15); color: #d97706; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .run-indicator {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--fall-bg);
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--fall);
+      margin-top: 12px;
+    }
+    .run-indicator.show { display: flex; }
+    .run-indicator .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--fall);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M3.5 18.5l6-6 4 4L22 6.5"/><path d="M22 6.5h-5m5 0v5"/></svg>
+      </div>
+      Smart Stock Picker
+    </div>
+  </header>
+
+  <main class="main-layout">
+    <aside class="formula-panel">
+      <div class="panel-section">
+        <div class="section-header">
+          <span class="section-title">当前策略</span>
+        </div>
+        <div class="formula-header">
+          <div class="formula-avatar" id="headerAvatar">📈</div>
+          <div class="formula-info">
+            <div class="formula-name" id="headerName">RPS三线红</div>
+            <div class="formula-desc" id="headerDesc">RPS50>90 且 RPS120>93 且 RPS250>95</div>
+          </div>
+        </div>
+        <div class="editor-box">
+          <div class="editor-tabs">
+            <button class="editor-tab active">策略代码</button>
+            <button class="editor-tab">策略说明</button>
+          </div>
+          <div class="editor-content">
+            <textarea class="formula-textarea" id="formulaText">// RPS三线红 (S3)
+RPS50 := RANK(PCT_CHG(CLOSE, 50));
+RPS120 := RANK(PCT_CHG(CLOSE, 120));
+RPS250 := RANK(PCT_CHG(CLOSE, 250));
+
+COND1 := RPS50 > 90;
+COND2 := RPS120 > 93;
+COND3 := RPS250 > 95;
+COND4 := CLOSE / HHV(HIGH, 250) > 0.85;
+
+FILTER := COND1 AND COND2 AND COND3 AND COND4;</textarea>
+            <div class="editor-actions">
+              <button class="btn">参数</button>
+              <button class="btn primary" id="runBtn" onclick="runStrategy()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                执行选股
+              </button>
+            </div>
+            <div class="run-indicator" id="runIndicator">
+              <div class="spinner"></div>
+              <span>扫描中... 0/5194</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-header">
+          <span class="section-title">内置策略</span>
+          <span class="section-action">+ 自定义</span>
+        </div>
+        <div class="formula-list" id="formulaList"></div>
+      </div>
+    </aside>
+
+    <section class="results-panel">
+      <div class="date-banner">
+        <div class="date-info">
+          <span class="date-main">2026年6月9日</span>
+          <span class="date-weekday">星期一</span>
+        </div>
+        <div class="date-status">
+          <span class="status-dot-white"></span>
+          交易日
+        </div>
+      </div>
+
+      <div class="results-header">
+        <div class="results-title">
+          <span class="results-name" id="resultName">选股结果</span>
+          <span class="results-count" id="resultCount">--</span>
+          <span class="results-time" id="resultTime">--</span>
+        </div>
+        <button class="btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          刷新
+        </button>
+      </div>
+
+      <div class="results-content">
+        <table class="stock-table">
+          <thead>
+            <tr>
+              <th style="width: 40px;">#</th>
+              <th style="width: 90px;">代码</th>
+              <th>名称</th>
+              <th style="width: 70px;">现价</th>
+              <th style="width: 80px;">涨跌幅</th>
+              <th style="width: 55px;">RPS50</th>
+              <th style="width: 55px;">RPS120</th>
+              <th style="width: 55px;">RPS250</th>
+              <th style="width: 70px;">评分</th>
+              <th style="width: 50px;"></th>
+            </tr>
+          </thead>
+          <tbody id="stockTableBody">
+            <tr><td colspan="10" style="text-align: center; padding: 40px; color: var(--text-muted);">点击「执行选股」开始扫描</td></tr>
+          </tbody>
+        </table>
+        <div class="pagination">
+          <div class="page-info" id="pageInfo">共 0 条</div>
+          <div class="page-buttons" id="pageButtons"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // 策略数据
+    const strategies = [
+      {
+        id: 'b1',
+        name: '强势突破',
+        shortName: 'B1',
+        icon: '📊',
+        iconClass: 'b1',
+        tagClass: 'b1',
+        desc: 'KDJ超卖 + 多空线突破',
+        count: 23,
+        code: `// 强势突破 (B1)
+RSV := (CLOSE - LLV(LOW, 9)) / (HHV(HIGH, 9) - LLV(LOW, 9)) * 100;
+K := SMA(RSV, 3, 1);
+D := SMA(K, 3, 1);
+J := 3*K - 2*D;
+
+// 多空线
+ZXDQ := EMA(EMA(CLOSE, 10), 10);
+ZXDKX := (MA(CLOSE, 14) + MA(CLOSE, 28) + MA(CLOSE, 57) + MA(CLOSE, 114)) / 4;
+
+COND1 := J < 18;
+COND2 := CLOSE > ZXDKX;
+COND3 := ZXDQ > ZXDKX;
+
+FILTER := COND1 AND COND2 AND COND3;`,
+        condition: 'J < 18 AND C > 多空线 AND 多头线 > 空头线'
+      },
+      {
+        id: 's2',
+        name: '月线反转',
+        shortName: 'S2',
+        icon: '🌙',
+        iconClass: 's2',
+        tagClass: 's2',
+        desc: '年线突破 + 50日新高',
+        count: 15,
+        code: `// 月线反转 (S2) - 欧奈尔体系
+MA250 := MA(CLOSE, 250);
+HHV50 := HHV(HIGH, 50);
+
+A := CLOSE > MA250;
+B := HIGH >= HHV50 AND CLOSE > MA250;
+RPS50 := RANK(PCT_CHG(CLOSE, 50));
+
+COND1 := A AND B;
+COND2 := RPS50 >= 85;
+COND3 := COUNT(CLOSE > MA250, 30) > 2;
+
+FILTER := COND1 AND COND2 AND COND3;`,
+        condition: '站上年线 + 50日新高 + RPS50≥85'
+      },
+      {
+        id: 's3',
+        name: 'RPS三线红',
+        shortName: 'S3',
+        icon: '📈',
+        iconClass: 's3',
+        tagClass: 's3',
+        desc: 'RPS三线同时强势',
+        count: 18,
+        code: `// RPS三线红 (S3)
+RPS50 := RANK(PCT_CHG(CLOSE, 50));
+RPS120 := RANK(PCT_CHG(CLOSE, 120));
+RPS250 := RANK(PCT_CHG(CLOSE, 250));
+
+COND1 := RPS50 > 90;
+COND2 := RPS120 > 93;
+COND3 := RPS250 > 95;
+COND4 := CLOSE / HHV(HIGH, 250) > 0.85;
+
+FILTER := COND1 AND COND2 AND COND3 AND COND4;`,
+        condition: 'RPS50>90 AND RPS120>93 AND RPS250>95'
+      },
+      {
+        id: 'kd1',
+        name: 'KD1战法',
+        shortName: 'KD1',
+        icon: '⚡',
+        iconClass: 'kd1',
+        tagClass: 'kd1',
+        desc: '任一RPS>95 + 接近高点',
+        count: 12,
+        code: `// KD1战法
+RPS50 := RANK(PCT_CHG(CLOSE, 50));
+RPS120 := RANK(PCT_CHG(CLOSE, 120));
+RPS250 := RANK(PCT_CHG(CLOSE, 250));
+
+COND1 := RPS50 > 95 OR RPS120 > 95 OR RPS250 > 95;
+COND2 := CLOSE / HHV(HIGH, 250) > 0.6;
+
+FILTER := COND1 AND COND2;`,
+        condition: '任一RPS>95 AND 距250日高点<40%'
+      },
+      {
+        id: 'custom1',
+        name: '低估成长股',
+        shortName: '自定义',
+        icon: '💰',
+        iconClass: 'preset',
+        tagClass: 'user',
+        desc: 'PEG<1 + ROE>20%',
+        count: 25,
+        code: `// 低估成长股
+PE := DynEquity("PE");
+ROE := DynEquity("ROE");
+PROFIT_GROWTH := DynEquity("NetProfitGrowRate");
+PEG := DynEquity("PEG");
+
+COND1 := PEG < 1;
+COND2 := ROE > 20;
+COND3 := PROFIT_GROWTH > 15;
+
+FILTER := COND1 AND COND2 AND COND3;`,
+        condition: 'PEG<1 AND ROE>20% AND 净利润增长>15%'
+      },
+      {
+        id: 'custom2',
+        name: 'MACD金叉',
+        shortName: '自定义',
+        icon: '🎯',
+        iconClass: 'preset',
+        tagClass: 'user',
+        desc: 'DIF上穿DEA',
+        count: 8,
+        code: `// MACD金叉
+DIF := EMA(CLOSE, 12) - EMA(CLOSE, 26);
+DEA := EMA(DIF, 9);
+MACD := 2 * (DIF - DEA);
+
+COND1 := DIF > DEA;
+COND2 := REF(DIF, 1) <= REF(DEA, 1);
+
+FILTER := COND1 AND COND2;`,
+        condition: 'DIF>DEA AND 昨日DIF≤昨日DEA'
+      }
+    ];
+
+    // 模拟股票数据
+    const allStocks = [
+      { rank: 1, code: '600519', name: '贵州茅台', price: '1,682.50', change: '+2.34', up: true, rps50: 95.2, rps120: 97.1, rps250: 94.8, strategy: 's3' },
+      { rank: 2, code: '300750', name: '宁德时代', price: '198.60', change: '-0.52', up: false, rps50: 93.8, rps120: 91.5, rps250: 89.2, strategy: 's3' },
+      { rank: 3, code: '688041', name: '海光信息', price: '78.50', change: '+4.21', up: true, rps50: 98.5, rps120: 96.3, rps250: 88.7, strategy: 'kd1' },
+      { rank: 4, code: '601318', name: '中国平安', price: '42.35', change: '+0.89', up: true, rps50: 72.3, rps120: 78.5, rps250: 65.2, strategy: 's2' },
+      { rank: 5, code: '000858', name: '五粮液', price: '145.80', change: '+1.87', up: true, rps50: 88.6, rps120: 94.2, rps250: 96.1, strategy: 's3' },
+      { rank: 6, code: '002475', name: '立讯精密', price: '28.90', change: '-1.23', up: false, rps50: 65.4, rps120: 72.8, rps250: 68.5, strategy: 'b1' },
+      { rank: 7, code: '300059', name: '东方财富', price: '15.68', change: '+2.15', up: true, rps50: 91.2, rps120: 87.6, rps250: 82.4, strategy: 's3' },
+      { rank: 8, code: '600036', name: '招商银行', price: '35.20', change: '+0.65', up: true, rps50: 58.3, rps120: 62.1, rps250: 55.8, strategy: 's2' },
+      { rank: 9, code: '688012', name: '中微公司', price: '168.30', change: '+3.45', up: true, rps50: 96.8, rps120: 93.5, rps250: 91.2, strategy: 'kd1' },
+      { rank: 10, code: '300223', name: '北京君正', price: '92.50', change: '+5.12', up: true, rps50: 99.1, rps120: 97.8, rps250: 94.5, strategy: 'kd1' },
+      { rank: 11, code: '002049', name: '紫光国微', price: '68.20', change: '+1.78', up: true, rps50: 85.6, rps120: 82.3, rps250: 79.8, strategy: 's3' },
+      { rank: 12, code: '300274', name: '阳光电源', price: '125.60', change: '+2.33', up: true, rps50: 92.4, rps120: 95.8, rps250: 93.2, strategy: 's3' },
+      { rank: 13, code: '600809', name: '山西汾酒', price: '268.50', change: '+1.45', up: true, rps50: 78.9, rps120: 85.2, rps250: 88.6, strategy: 's2' },
+      { rank: 14, code: '300496', name: '中科创达', price: '58.30', change: '-0.85', up: false, rps50: 68.2, rps120: 71.5, rps250: 65.8, strategy: 'b1' },
+      { rank: 15, code: '002371', name: '北方华创', price: '328.90', change: '+3.67', up: true, rps50: 94.5, rps120: 91.8, rps250: 89.3, strategy: 'kd1' },
+      { rank: 16, code: '300124', name: '汇川技术', price: '68.50', change: '+2.11', up: true, rps50: 87.2, rps120: 89.5, rps250: 86.8, strategy: 's3' },
+      { rank: 17, code: '688256', name: '寒武纪', price: '168.20', change: '+8.52', up: true, rps50: 99.5, rps120: 98.2, rps250: 95.8, strategy: 'kd1' },
+      { rank: 18, code: '002415', name: '海康威视', price: '38.60', change: '+0.92', up: true, rps50: 62.3, rps120: 68.5, rps250: 58.2, strategy: 's2' },
+      { rank: 19, code: '300760', name: '迈瑞医疗', price: '328.50', change: '+1.23', up: true, rps50: 75.8, rps120: 78.2, rps250: 82.5, strategy: 's2' },
+      { rank: 20, code: '688111', name: '金山办公', price: '398.20', change: '+4.15', up: true, rps50: 93.8, rps120: 90.5, rps250: 87.2, strategy: 'kd1' }
+    ];
+
+    let currentStrategy = strategies[2]; // 默认 S3
+    let filteredStocks = [];
+    let currentPage = 1;
+    const pageSize = 10;
+
+    // 渲染策略列表
+    function renderStrategyList() {
+      const container = document.getElementById('formulaList');
+      container.innerHTML = strategies.map(s => {
+        const activeClass = s.id === currentStrategy.id ? ' active' : '';
+        return '<div class="formula-item' + activeClass + '" onclick="switchStrategy(\'' + s.id + '\')">' +
+          '<div class="formula-icon ' + s.iconClass + '">' + s.icon + '</div>' +
+          '<div class="formula-item-info">' +
+            '<div class="formula-item-name">' + s.name + '</div>' +
+            '<div class="formula-item-count">' + s.count + ' 只</div>' +
+          '</div>' +
+          '<span class="strategy-tag ' + s.tagClass + '">' + s.shortName + '</span>' +
+        '</div>';
+      }).join('');
+    }
+
+    // 切换策略
+    function switchStrategy(id) {
+      const strategy = strategies.find(s => s.id === id);
+      if (!strategy) return;
+      
+      currentStrategy = strategy;
+      
+      // 更新上方详情
+      document.getElementById('headerAvatar').textContent = strategy.icon;
+      document.getElementById('headerName').textContent = strategy.name;
+      document.getElementById('headerDesc').textContent = strategy.condition;
+      document.getElementById('formulaText').value = strategy.code;
+      document.getElementById('resultName').textContent = strategy.name;
+      
+      // 清空结果
+      document.getElementById('stockTableBody').innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 40px; color: var(--text-muted);">点击「执行选股」开始扫描</td></tr>';
+      document.getElementById('resultCount').textContent = '--';
+      document.getElementById('resultTime').textContent = '--';
+      document.getElementById('pageInfo').textContent = '共 0 条';
+      document.getElementById('pageButtons').innerHTML = '';
+      
+      // 重渲染列表
+      renderStrategyList();
+    }
+
+    // 执行选股
+    function runStrategy() {
+      const btn = document.getElementById('runBtn');
+      const indicator = document.getElementById('runIndicator');
+      
+      btn.classList.add('running');
+      btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border:2px solid white;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></div> 扫描中';
+      btn.disabled = true;
+      indicator.classList.add('show');
+      
+      // 模拟扫描进度
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += Math.random() * 500 + 200;
+        if (progress >= 5194) {
+          progress = 5194;
+          clearInterval(interval);
+          finishScan();
+        }
+        indicator.querySelector('span').textContent = '扫描中... ' + Math.min(Math.floor(progress), 5194) + '/5194';
+      }, 50);
+    }
+
+    function finishScan() {
+      const btn = document.getElementById('runBtn');
+      const indicator = document.getElementById('runIndicator');
+      
+      btn.classList.remove('running');
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> 执行选股';
+      btn.disabled = false;
+      indicator.classList.remove('show');
+      
+      // 根据策略筛选股票
+      filteredStocks = allStocks.filter(stock => {
+        switch(currentStrategy.id) {
+          case 's3':
+            return stock.rps50 > 90 && stock.rps120 > 93 && stock.rps250 > 95;
+          case 'b1':
+            return stock.strategy === 'b1' || (stock.rps50 > 65 && stock.rps50 < 85);
+          case 's2':
+            return stock.strategy === 's2' || (stock.rps50 > 70 && stock.rps50 < 90);
+          case 'kd1':
+            return stock.rps50 > 95 || stock.rps120 > 95 || stock.rps250 > 95;
+          default:
+            return true;
+        }
+      }).sort((a, b) => b.rps50 - a.rps50);
+      
+      // 更新结果
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('zh-CN', { hour12: false });
+      document.getElementById('resultCount').textContent = filteredStocks.length;
+      document.getElementById('resultTime').textContent = timeStr + ' 更新';
+      
+      currentPage = 1;
+      renderStocks();
+    }
+
+    // 渲染股票列表
+    function renderStocks() {
+      const tbody = document.getElementById('stockTableBody');
+      const start = (currentPage - 1) * pageSize;
+      const end = start + pageSize;
+      const pageStocks = filteredStocks.slice(start, end);
+      
+      if (pageStocks.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 40px; color: var(--text-muted);">暂无符合条件的股票</td></tr>';
+      } else {
+        tbody.innerHTML = pageStocks.map((s, i) => {
+          const changeClass = s.up ? 'up' : 'down';
+          const sign = s.up ? '+' : '';
+          const score = Math.round((s.rps50 + s.rps120 + s.rps250) / 3);
+          return '<tr>' +
+            '<td>' + (start + i + 1) + '</td>' +
+            '<td class="stock-code">' + s.code + '</td>' +
+            '<td>' + s.name + '<span class="strategy-tag ' + s.strategy + '">' + s.strategy.toUpperCase() + '</span></td>' +
+            '<td class="stock-price">' + s.price + '</td>' +
+            '<td><span class="stock-change ' + changeClass + '">' + sign + s.change + '%</span></td>' +
+            '<td class="stock-metric">' + s.rps50.toFixed(1) + '</td>' +
+            '<td class="stock-metric">' + s.rps120.toFixed(1) + '</td>' +
+            '<td class="stock-metric">' + s.rps250.toFixed(1) + '</td>' +
+            '<td><div class="stock-score"><div class="score-bar"><div class="score-fill" style="width:' + score + '%"></div></div><span class="score-value">' + score + '</span></div></td>' +
+            '<td><button class="watch-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></button></td>' +
+          '</tr>';
+        }).join('');
+      }
+      
+      // 渲染分页
+      const totalPages = Math.ceil(filteredStocks.length / pageSize);
+      document.getElementById('pageInfo').textContent = '共 ' + filteredStocks.length + ' 条';
+      
+      let pageHtml = '';
+      for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+        pageHtml += '<button class="page-btn' + (i === currentPage ? ' active' : '') + '" onclick="goPage(' + i + ')">' + i + '</button>';
+      }
+      if (totalPages > 5) pageHtml += '<span style="padding: 0 8px;">...</span><button class="page-btn" onclick="goPage(' + totalPages + ')">' + totalPages + '</button>';
+      document.getElementById('pageButtons').innerHTML = pageHtml;
+    }
+
+    function goPage(page) {
+      currentPage = page;
+      renderStocks();
+    }
+
+    // 初始化
+    renderStrategyList();
+  </script>
+</body>
+</html>

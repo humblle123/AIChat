@@ -1,0 +1,48 @@
+# ============================================
+# Backend: Smart Stock Picker (Python FastAPI)
+# ============================================
+FROM python:3.11-slim AS base
+
+# 防止 Python 缓冲 stdout/stderr，方便看日志
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# 数据库与数据文件存放目录（由 docker-compose volume 挂载）
+ENV PICKER_DB_DIR=/app/data
+
+WORKDIR /app
+
+# 安装系统依赖（编译 numpy/pandas 可能需要的工具）
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# 先复制依赖文件，利用 Docker 层缓存
+COPY stock-picker/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple \
+    --trusted-host pypi.tuna.tsinghua.edu.cn \
+    -r requirements.txt
+
+# 复制后端代码
+COPY stock-picker/ /app/stock-picker/
+
+# 复制数据初始化脚本
+COPY docker/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# 复制辅助脚本（K 线导入）
+COPY scripts/import_hsjday_to_sqlite.py /app/scripts/import_hsjday_to_sqlite.py
+
+# 创建数据目录（volume 挂载点）
+RUN mkdir -p /app/data /app/hsjday\ 2
+
+WORKDIR /app/stock-picker
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8080/api/health/ready || exit 1
+
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]
