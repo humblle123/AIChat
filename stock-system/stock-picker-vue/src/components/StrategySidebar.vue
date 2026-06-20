@@ -1,5 +1,35 @@
 <template>
   <aside class="panel">
+    <!-- 自选股入口 -->
+    <div class="panel-section">
+      <button
+        class="watchlist-main-btn"
+        :class="{ active: store.watchlistMode }"
+        @click="store.loadWatchlistItems()"
+      >
+        <span>★ 我的自选</span>
+        <span class="watchlist-count">{{ store.watchlistCodes.length }} 只</span>
+      </button>
+
+      <div v-if="store.watchlistMode" class="watchlist-tools">
+        <div class="watchlist-actions">
+          <button class="wl-btn" @click="importOpen = !importOpen">📥 导入</button>
+          <button class="wl-btn" @click="exportCsv">📤 导出</button>
+          <button class="wl-btn" @click="store.leaveWatchlistMode()">✕ 关闭</button>
+        </div>
+        <div v-if="importOpen" class="import-panel">
+          <textarea
+            v-model="importText"
+            class="import-textarea"
+            placeholder="粘贴股票代码，每行一个或用逗号分隔&#10;例如：&#10;000001&#10;600519&#10;000858"
+            rows="5"
+          />
+          <button class="wl-btn primary" @click="doImport">确认导入</button>
+          <span v-if="importMsg" class="import-msg">{{ importMsg }}</span>
+        </div>
+      </div>
+    </div>
+
     <div class="panel-section">
       <div class="section-title">当前公式</div>
 
@@ -51,7 +81,10 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import { usePickerStore } from '../stores/picker';
+
+const store = usePickerStore();
 
 const props = defineProps({
   templates: { type: Array, default: () => [] },
@@ -65,6 +98,34 @@ const props = defineProps({
 });
 
 defineEmits(['select', 'refresh']);
+
+const importOpen = ref(false);
+const importText = ref('');
+const importMsg = ref('');
+
+async function doImport() {
+  const raw = importText.value;
+  if (!raw.trim()) return;
+  const codes = raw.split(/[\n,，\s]+/).filter(Boolean);
+  const result = await store.importWatchlist(codes);
+  importMsg.value = `成功导入 ${result.imported} 只（共 ${codes.length} 条）`;
+  importText.value = '';
+}
+
+function exportCsv() {
+  const rows = ['code,name'];
+  for (const c of store.watchlistCodes) {
+    const item = store.items.find((i) => i.code === c);
+    rows.push(`${c},${item?.name || ''}`);
+  }
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'watchlist.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 const iconByStrategy = {
   b1: '📊',

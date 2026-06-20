@@ -1,5 +1,11 @@
 <template>
   <div class="stock-board">
+    <div class="stock-board-header">
+      <span class="stock-board-total">{{ total }} 只股票</span>
+      <button class="watchlist-filter-btn" :class="{ active: watchlistOnly }" @click="watchlistOnly = !watchlistOnly">
+        ★ 自选 ({{ store.watchlistCodes.length }})
+      </button>
+    </div>
     <div class="stock-board-scroll">
       <table class="stock-table">
         <thead>
@@ -34,7 +40,7 @@
         </thead>
         <tbody>
           <tr
-            v-for="(item, index) in sortedItems"
+            v-for="(item, index) in filteredItems"
             :key="item.code"
             :ref="setRowRef(item.code)"
             :class="{ selected: item.code === selectedCode }"
@@ -64,10 +70,10 @@
               <span class="score-value">{{ score(item) }}</span>
             </td>
           </tr>
-          <tr v-if="!items.length">
+          <tr v-if="!filteredItems.length">
             <td colspan="10" class="empty-state">
-              <div class="empty-state-icon">📊</div>
-              暂无结果
+              <div class="empty-state-icon">{{ watchlistOnly ? '⭐' : '📊' }}</div>
+              {{ watchlistOnly ? '暂无自选股，点击星标添加' : '暂无结果' }}
             </td>
           </tr>
         </tbody>
@@ -90,6 +96,14 @@ const props = defineProps({
 
 const emit = defineEmits(['select']);
 const rowRefs = new Map();
+
+const watchlistOnly = ref(false);
+
+const filteredItems = computed(() => {
+  const list = sortedItems.value;
+  if (!watchlistOnly.value) return list;
+  return list.filter((item) => store.isFavorited(item.code));
+});
 
 const sortKey = ref('');
 const sortAsc = ref(true);
@@ -172,5 +186,5 @@ function score(item) {
   return Math.max(0, Math.min(100, Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)));
 }
 
-defineExpose({ sortedItems });
+defineExpose({ sortedItems, filteredItems });
 </script>

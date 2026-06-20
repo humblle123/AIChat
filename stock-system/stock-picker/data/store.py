@@ -1379,6 +1379,47 @@ def is_in_watchlist(code: str) -> bool:
         return cursor.fetchone() is not None
 
 
+def get_watchlist_detail() -> List[Dict]:
+    """获取自选股详情（JOIN stock_basic + quote + rps）。"""
+    with get_cursor() as cursor:
+        cursor.execute("""
+            SELECT w.code, sb.name, sb.market, sb.industry, sb.concept_tags,
+                   sb.security_type, sb.listed_date,
+                   q.price, q.change, q.change_pct, q.volume, q.amount,
+                   q.total_mv, q.circ_mv, q.pe, q.pb,
+                   r.rps50, r.rps120, r.rps250,
+                   w.added_at
+            FROM stock_watchlist w
+            LEFT JOIN stock_basic sb ON sb.code = w.code
+            LEFT JOIN stock_quote_snapshot q ON q.code = w.code
+            LEFT JOIN stock_rps r ON r.code = w.code
+            ORDER BY w.added_at DESC
+        """)
+        rows = cursor.fetchall()
+        items = []
+        for row in rows:
+            d = dict(row)
+            d['concept_tags'] = _safe_json_loads(d.get('concept_tags'), [])
+            items.append(d)
+        return items
+
+
+def import_watchlist(codes: List[str]) -> int:
+    """批量导入自选股。返回实际新增数量。"""
+    count = 0
+    with get_cursor() as cursor:
+        for code in codes:
+            c = code.strip()
+            if not c:
+                continue
+            cursor.execute(
+                "INSERT OR IGNORE INTO stock_watchlist (code) VALUES (?)", (c,)
+            )
+            if cursor.rowcount > 0:
+                count += 1
+    return count
+
+
 # ====== 选股结果管理 ======
 
 def save_screen_result(date: str, formula_id: int, results: List[Dict]):

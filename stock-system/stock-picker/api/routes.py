@@ -12,6 +12,7 @@ from api.schemas import (
     StockTemplateHit,
     FormulaValidateRequest, FormulaValidateResponse,
     WatchlistAddRequest, WatchlistItem, WatchlistCheckResponse,
+    StockSearchItem,
 )
 from strategies import list_strategies
 from engine import ScreeningEngine
@@ -22,7 +23,8 @@ from data.store import (
     get_latest_screen_results, save_screen_result,
     get_formula_templates, get_formula_template_by_id,
     get_template_screen_summary,
-    get_watchlist, add_to_watchlist, remove_from_watchlist, is_in_watchlist,
+    get_watchlist, get_watchlist_detail, import_watchlist,
+    add_to_watchlist, remove_from_watchlist, is_in_watchlist,
 )
 from formula_engine import validate as validate_formula, evaluate_formula, FormulaError
 from config import STRATEGY_DEFAULTS
@@ -66,9 +68,39 @@ async def health_ready():
 
 # ====== 自选股 API ======
 
-@router.get('/watchlist', response_model=List[WatchlistItem], tags=['watchlist'])
+@router.get('/watchlist', response_model=List[StockSearchItem], tags=['watchlist'])
 async def list_watchlist():
-    """获取自选股列表。"""
+    """获取自选股详情列表（含行情/RPS/财务）。"""
+    items = get_watchlist_detail()
+    return [
+        StockSearchItem(
+            code=item['code'],
+            name=item.get('name', ''),
+            market=item.get('market', ''),
+            industry=item.get('industry', ''),
+            concept_tags=item.get('concept_tags') or [],
+            security_type=item.get('security_type', 'stock'),
+            listed_date=item.get('listed_date', ''),
+            price=item.get('price') or 0.0,
+            change=item.get('change') or 0.0,
+            change_pct=item.get('change_pct') or 0.0,
+            volume=item.get('volume') or 0,
+            amount=item.get('amount') or 0.0,
+            total_mv=item.get('total_mv') or 0.0,
+            circ_mv=item.get('circ_mv') or 0.0,
+            pe_ttm=item.get('pe'),
+            pb=item.get('pb'),
+            rps50=item.get('rps50'),
+            rps120=item.get('rps120'),
+            rps250=item.get('rps250'),
+        )
+        for item in items
+    ]
+
+
+@router.get('/watchlist/codes', response_model=List[WatchlistItem], tags=['watchlist'])
+async def list_watchlist_codes():
+    """获取自选股代码列表（轻量）。"""
     return [
         WatchlistItem(
             code=item['code'],
@@ -88,6 +120,13 @@ async def add_watchlist(request: WatchlistAddRequest):
     """加入自选。"""
     ok = add_to_watchlist(request.code)
     return {'code': request.code, 'added': ok}
+
+
+@router.post('/watchlist/import', tags=['watchlist'])
+async def import_watchlist_endpoint(request: List[str]):
+    """批量导入自选股代码。返回新增数量。"""
+    count = import_watchlist(request)
+    return {'imported': count, 'total': len(request)}
 
 
 @router.delete('/watchlist/{code}', tags=['watchlist'])

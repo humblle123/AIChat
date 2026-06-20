@@ -27,6 +27,7 @@ export const usePickerStore = defineStore('picker', () => {
 
   // ---- 自选股 ----
   const watchlistCodes = ref([]);
+  const watchlistMode = ref(false);
   const loadingWatchlist = ref(false);
 
   function restoreWatchlist() {
@@ -70,6 +71,46 @@ export const usePickerStore = defineStore('picker', () => {
       try { await api.watchlist.add(code); } catch { /* offline ok */ }
     }
     persistWatchlist();
+  }
+
+  async function loadWatchlistItems() {
+    watchlistMode.value = true;
+    loadingResults.value = true;
+    error.value = '';
+    try {
+      items.value = await api.watchlist.list();
+      total.value = items.value.length;
+      date.value = '';
+      cacheHit.value = false;
+      if (items.value.length) {
+        selectedCode.value = items.value[0].code;
+        await loadDetail(items.value[0].code);
+      } else {
+        selectedCode.value = '';
+        detail.value = null;
+      }
+    } catch (err) {
+      items.value = [];
+      total.value = 0;
+      error.value = err?.message || '自选股加载失败';
+    } finally {
+      loadingResults.value = false;
+    }
+  }
+
+  async function importWatchlist(codes) {
+    try {
+      const result = await api.watchlist.import(codes);
+      await loadWatchlist();
+      return result;
+    } catch (err) {
+      error.value = err?.message || '导入失败';
+      return { imported: 0 };
+    }
+  }
+
+  function leaveWatchlistMode() {
+    watchlistMode.value = false;
   }
 
   const activeTemplate = computed(() => templates.value.find((item) => item.id === activeTemplateId.value) || null);
@@ -285,9 +326,13 @@ export const usePickerStore = defineStore('picker', () => {
     selectRelative,
     // 自选股
     watchlistCodes,
+    watchlistMode,
     loadingWatchlist,
     isFavorited,
     toggleWatchlist,
     loadWatchlist,
+    loadWatchlistItems,
+    importWatchlist,
+    leaveWatchlistMode,
   };
 });

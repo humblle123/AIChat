@@ -32,8 +32,10 @@ export const api = {
     request(`/kline/${encodeURIComponent(code)}?period=${encodeURIComponent(period)}`, { signal }),
   watchlist: {
     list: () => request('/watchlist'),
+    codes: () => request('/watchlist/codes'),
     add: (code) => request('/watchlist', { method: 'POST', body: JSON.stringify({ code }) }),
     remove: (code) => request(`/watchlist/${encodeURIComponent(code)}`, { method: 'DELETE' }),
     check: (code) => request(`/watchlist/${encodeURIComponent(code)}`),
+    import: (codes) => request('/watchlist/import', { method: 'POST', body: JSON.stringify(codes) }),
   },
 };
