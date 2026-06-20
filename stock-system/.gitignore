@@ -25,6 +25,9 @@ dist/
 *.db-journal
 *.db-wal
 
+# 大数据文件 (每次可重新生成)
+*.parquet
+
 # Claude Code 本地配置 (含个人权限)
 .claude/settings.local.json
 
