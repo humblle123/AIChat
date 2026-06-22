@@ -257,7 +257,7 @@ function applyData(main, kdj) {
     main.bars.map((bar) => ({
       time: bar.time,
       value: bar.volume,
-      color: bar.close >= bar.open ? 'rgba(46,125,64,0.35)' : 'rgba(184,64,58,0.35)',
+      color: bar.close >= bar.open ? 'rgba(184,64,58,0.35)' : 'rgba(46,125,64,0.35)',
     })),
   );
   const overlay = buildPriceOverlaySeries(main.bars);
@@ -361,8 +361,8 @@ function initCharts() {
   kdjChart = makeChart(kdjRef.value, 110);
 
   candleSeries = mainChart.addCandlestickSeries({
-    upColor: '#2E7D40',
-    downColor: '#B8403A',
+    upColor: '#B8403A',
+    downColor: '#2E7D40',
     borderUpColor: '#ef4444',
     borderDownColor: '#22c55e',
     wickUpColor: '#ef4444',

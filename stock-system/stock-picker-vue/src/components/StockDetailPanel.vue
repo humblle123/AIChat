@@ -27,8 +27,8 @@
             <p class="mt-1 text-sm text-[#6B665D]" style="font-family:var(--font-mono)">{{ detail.basic.code }} · {{ detail.basic.industry }}</p>
           </div>
           <div class="text-right">
-            <div class="text-2xl font-semibold text-[#2E7D40]" style="font-family:var(--font-serif);font-variant-numeric:tabular-nums">{{ formatMoney(detail.quote.price) }}</div>
-            <div class="text-sm text-[#B8403A]" style="font-family:var(--font-mono)">{{ formatPct(detail.quote.change_pct) }}</div>
+            <div class="text-2xl font-semibold text-[#1C1A17]" style="font-family:var(--font-serif);font-variant-numeric:tabular-nums">{{ formatMoney(detail.quote.price) }}</div>
+            <div class="text-sm" :class="detailChangeClass" style="font-family:var(--font-mono)">{{ formatPct(detail.quote.change_pct) }}</div>
           </div>
         </div>
 
@@ -102,6 +102,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import KlineChart from './KlineChart.vue';
 import { usePickerStore } from '../stores/picker';
 
@@ -111,7 +112,12 @@ const props = defineProps({
   detail: { type: Object, default: null },
 });
 
-function formatMoney(value) {
+const detailChangeClass = computed(() => {
+  const v = Number(props.detail?.quote?.change_pct);
+  if (!Number.isFinite(v) || v === 0) return 'text-[#1C1A17]';
+  return v > 0 ? 'text-[#B8403A]' : 'text-[#2E7D40]';
+});
+
   if (value === null || value === undefined || Number.isNaN(Number(value))) return '--';
   return Number(value).toFixed(2);
 }
