@@ -1,21 +1,21 @@
 <template>
-  <section class="rounded-3xl border border-white/10 bg-slate-950/80 p-4 shadow-glow backdrop-blur">
+  <section class="rounded-2xl border border-warm-400/50 bg-warm-100/95 p-4 shadow-sm">
     <div class="flex items-start justify-between gap-3">
       <div>
-        <p class="text-xs uppercase tracking-[0.28em] text-slate-500">Detail</p>
-        <h2 class="mt-1 text-lg font-semibold text-slate-50">个股详情</h2>
+        <p class="text-xs uppercase tracking-[0.28em] text-[#9E9790]">Detail</p>
+        <h2 class="mt-1 text-lg font-semibold text-[#1C1A17]" style="font-family:var(--font-serif);letter-spacing:-0.01em">个股详情</h2>
       </div>
-      <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium text-slate-300">
+      <span class="rounded-full border border-warm-400/50 bg-warm-100/70 px-3 py-1 text-[11px] font-medium text-[#6B665D]">
         {{ detail?.basic?.market || 'SSE' }}
       </span>
     </div>
 
     <div v-if="detail" class="mt-4 space-y-4">
-      <div class="rounded-3xl border border-white/8 bg-white/5 p-4">
+      <div class="rounded-2xl border border-warm-400/40 bg-warm-100/70 p-4">
         <div class="flex items-start justify-between gap-3">
           <div>
             <div class="flex items-center gap-2">
-              <h3 class="text-2xl font-semibold text-slate-50">{{ detail.basic.name }}</h3>
+              <h3 class="text-2xl font-semibold text-[#1C1A17]" style="font-family:var(--font-serif);letter-spacing:-0.01em">{{ detail.basic.name }}</h3>
               <button
                 class="watchlist-btn"
                 :class="{ active: store.isFavorited(detail.basic.code) }"
@@ -24,61 +24,79 @@
                 {{ store.isFavorited(detail.basic.code) ? '★ 已自选' : '☆ 加自选' }}
               </button>
             </div>
-            <p class="mt-1 font-mono text-sm text-slate-400">{{ detail.basic.code }} · {{ detail.basic.industry }}</p>
+            <p class="mt-1 text-sm text-[#6B665D]" style="font-family:var(--font-mono)">{{ detail.basic.code }} · {{ detail.basic.industry }}</p>
           </div>
           <div class="text-right">
-            <div class="font-mono text-2xl font-semibold text-emerald-300">{{ formatMoney(detail.quote.price) }}</div>
-            <div class="font-mono text-sm text-rose-300">{{ formatPct(detail.quote.change_pct) }}</div>
+            <div class="text-2xl font-semibold text-[#2E7D40]" style="font-family:var(--font-serif);font-variant-numeric:tabular-nums">{{ formatMoney(detail.quote.price) }}</div>
+            <div class="text-sm text-[#B8403A]" style="font-family:var(--font-mono)">{{ formatPct(detail.quote.change_pct) }}</div>
           </div>
         </div>
 
         <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
-          <div class="rounded-2xl border border-white/8 bg-slate-900/70 px-3 py-3">
-            <div class="text-[10px] uppercase tracking-[0.24em] text-slate-500">最新交易日</div>
-            <div class="mt-2 font-mono text-sm text-slate-50">{{ detail.quote.trade_date }}</div>
+          <div class="rounded-xl border border-warm-400/40 bg-warm-200/80 px-3 py-3">
+            <div class="text-[10px] uppercase tracking-[0.24em] text-[#9E9790]">最新交易日</div>
+            <div class="mt-2 text-sm text-[#1C1A17]" style="font-family:var(--font-mono)">{{ detail.quote.trade_date }}</div>
           </div>
-          <div class="rounded-2xl border border-white/8 bg-slate-900/70 px-3 py-3">
-            <div class="text-[10px] uppercase tracking-[0.24em] text-slate-500">上市天数</div>
-            <div class="mt-2 font-mono text-sm text-slate-50">{{ detail.basic.listed_days || '--' }}</div>
+          <div class="rounded-xl border border-warm-400/40 bg-warm-200/80 px-3 py-3">
+            <div class="text-[10px] uppercase tracking-[0.24em] text-[#9E9790]">上市天数</div>
+            <div class="mt-2 text-sm text-[#1C1A17]" style="font-family:var(--font-mono)">{{ detail.basic.listed_days || '--' }}</div>
           </div>
-          <div class="rounded-2xl border border-white/8 bg-slate-900/70 px-3 py-3">
-            <div class="text-[10px] uppercase tracking-[0.24em] text-slate-500">RPS50</div>
-            <div class="mt-2 font-mono text-sm text-slate-50">{{ formatScore(detail.technicals.rps50) }}</div>
+          <div class="rounded-xl border border-warm-400/40 bg-warm-200/80 px-3 py-3">
+            <div class="text-[10px] uppercase tracking-[0.24em] text-[#9E9790]">RPS50</div>
+            <div class="mt-2 text-sm text-[#1C1A17]" style="font-family:var(--font-mono)">{{ formatScore(detail.technicals.rps50) }}</div>
           </div>
-          <div class="rounded-2xl border border-white/8 bg-slate-900/70 px-3 py-3">
-            <div class="text-[10px] uppercase tracking-[0.24em] text-slate-500">RPS120</div>
-            <div class="mt-2 font-mono text-sm text-slate-50">{{ formatScore(detail.technicals.rps120) }}</div>
+          <div class="rounded-xl border border-warm-400/40 bg-warm-200/80 px-3 py-3">
+            <div class="text-[10px] uppercase tracking-[0.24em] text-[#9E9790]">RPS120</div>
+            <div class="mt-2 text-sm text-[#1C1A17]" style="font-family:var(--font-mono)">{{ formatScore(detail.technicals.rps120) }}</div>
           </div>
         </div>
       </div>
 
       <KlineChart :code="detail.basic.code" />
 
-      <div class="rounded-3xl border border-white/8 bg-white/5 p-4">
-        <h4 class="text-sm font-semibold text-slate-100">命中策略</h4>
+      <div class="rounded-2xl border border-warm-400/40 bg-warm-100/70 p-4">
+        <h4 class="text-sm font-semibold text-[#1C1A17]" style="font-family:var(--font-serif);letter-spacing:-0.01em">命中策略</h4>
         <div class="mt-3 space-y-2">
           <div
             v-for="hit in detail.template_hits"
             :key="`${hit.template_id}-${hit.strategy_id}`"
-            class="rounded-2xl border border-white/8 bg-slate-900/70 p-3"
+            class="rounded-xl border border-warm-400/40 bg-warm-200/80 p-3"
           >
             <div class="flex items-center justify-between gap-3">
               <div>
-                <div class="text-sm font-medium text-slate-100">{{ hit.name }}</div>
-                <div class="text-xs text-slate-500">{{ hit.strategy_id }}</div>
+                <div class="text-sm font-medium text-[#1C1A17]" style="font-family:var(--font-serif);letter-spacing:-0.01em">{{ hit.name }}</div>
+                <div class="text-xs text-[#9E9790]">{{ hit.strategy_id }}</div>
               </div>
-              <span class="rounded-full bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-emerald-200">
+              <span class="rounded-full bg-[#2E7D40]/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#2E7D40]">
                 matched
               </span>
             </div>
-            <p class="mt-2 text-xs leading-5 text-slate-400">{{ hit.reason }}</p>
+            <p class="mt-2 text-xs leading-5 text-[#6B665D]">{{ hit.reason }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-warm-400/40 bg-warm-100/70 p-4">
+        <h4 class="text-sm font-semibold text-[#1C1A17]" style="font-family:var(--font-serif);letter-spacing:-0.01em">基本面</h4>
+        <div class="mt-3 grid grid-cols-3 gap-3">
+          <div class="rounded-xl border border-warm-400/40 bg-warm-200/80 px-3 py-3">
+            <div class="text-[10px] uppercase tracking-[0.24em] text-[#9E9790]">PE (TTM)</div>
+            <div class="mt-2 text-sm text-[#1C1A17]" style="font-family:var(--font-mono)">{{ detail.fundamentals?.pe_ttm || '--' }}</div>
+          </div>
+          <div class="rounded-xl border border-warm-400/40 bg-warm-200/80 px-3 py-3">
+            <div class="text-[10px] uppercase tracking-[0.24em] text-[#9E9790]">PB</div>
+            <div class="mt-2 text-sm text-[#1C1A17]" style="font-family:var(--font-mono)">{{ detail.fundamentals?.pb || '--' }}</div>
+          </div>
+          <div class="rounded-xl border border-warm-400/40 bg-warm-200/80 px-3 py-3">
+            <div class="text-[10px] uppercase tracking-[0.24em] text-[#9E9790]">ROE</div>
+            <div class="mt-2 text-sm text-[#1C1A17]" style="font-family:var(--font-mono)">{{ detail.fundamentals?.roe_ttm || '--' }}%</div>
           </div>
         </div>
       </div>
     </div>
 
-    <div v-else class="mt-6 rounded-3xl border border-dashed border-white/10 bg-white/5 px-4 py-12 text-center">
-      <p class="text-sm text-slate-400">选中一只股票后，这里会显示详情、指标和命中策略。</p>
+    <div v-else class="mt-4 py-12 text-center text-sm text-[#9E9790]">
+      请选择一只股票查看详情
     </div>
   </section>
 </template>

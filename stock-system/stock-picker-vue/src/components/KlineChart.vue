@@ -257,7 +257,7 @@ function applyData(main, kdj) {
     main.bars.map((bar) => ({
       time: bar.time,
       value: bar.volume,
-      color: bar.close >= bar.open ? 'rgba(239, 68, 68, 0.45)' : 'rgba(34, 197, 94, 0.45)',
+      color: bar.close >= bar.open ? 'rgba(46,125,64,0.35)' : 'rgba(184,64,58,0.35)',
     })),
   );
   const overlay = buildPriceOverlaySeries(main.bars);
@@ -306,19 +306,19 @@ function makeChart(container, height) {
     width: container.clientWidth,
     height,
     layout: {
-      background: { type: ColorType.Solid, color: '#f0f2f5' },
-      textColor: '#5c6370',
+      background: { type: ColorType.Solid, color: '#F5F0E8' },
+      textColor: '#6B665D',
       attributionLogo: false,
     },
     grid: {
-      vertLines: { color: '#e2e5eb' },
-      horzLines: { color: '#e2e5eb' },
+      vertLines: { color: '#E4DDD0' },
+      horzLines: { color: '#E4DDD0' },
     },
     rightPriceScale: {
-      borderColor: '#e2e5eb',
+      borderColor: '#E4DDD0',
     },
     timeScale: {
-      borderColor: '#e2e5eb',
+      borderColor: '#E4DDD0',
       timeVisible: true,
       secondsVisible: false,
       tickMarkFormatter: () => '',
@@ -361,8 +361,8 @@ function initCharts() {
   kdjChart = makeChart(kdjRef.value, 110);
 
   candleSeries = mainChart.addCandlestickSeries({
-    upColor: '#ef4444',
-    downColor: '#22c55e',
+    upColor: '#2E7D40',
+    downColor: '#B8403A',
     borderUpColor: '#ef4444',
     borderDownColor: '#22c55e',
     wickUpColor: '#ef4444',
@@ -372,39 +372,39 @@ function initCharts() {
   volumeSeries = mainChart.addHistogramSeries({
     priceFormat: { type: 'volume' },
     priceScaleId: '',
-    color: 'rgba(100, 116, 139, 0.35)',
+    color: 'rgba(196, 122, 90, 0.18)',
   });
   volumeSeries.priceScale().applyOptions({
     scaleMargins: { top: 0.78, bottom: 0 },
   });
 
   zxdqSeries = mainChart.addLineSeries({
-    color: '#f59e0b',
+    color: '#C47A5A',
     lineWidth: 2,
     priceLineVisible: false,
     lastValueVisible: true,
   });
   zxdkxSeries = mainChart.addLineSeries({
-    color: '#2563eb',
+    color: '#7C6B5E',
     lineWidth: 2,
     priceLineVisible: false,
     lastValueVisible: true,
   });
 
   kSeries = kdjChart.addLineSeries({
-    color: '#ef4444',
+    color: '#C47A5A',
     lineWidth: 2,
     priceLineVisible: false,
     lastValueVisible: true,
   });
   dSeries = kdjChart.addLineSeries({
-    color: '#2563eb',
+    color: '#7C6B5E',
     lineWidth: 2,
     priceLineVisible: false,
     lastValueVisible: true,
   });
   jSeries = kdjChart.addLineSeries({
-    color: '#22c55e',
+    color: '#6B665D',
     lineWidth: 2,
     priceLineVisible: false,
     lastValueVisible: true,

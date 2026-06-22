@@ -3,8 +3,20 @@ module.exports = {
   content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      colors: {
+        warm: {
+          50: '#FDFBF7',
+          100: '#F5F0E8',
+          200: '#EEE8DB',
+          300: '#E4DCCC',
+          400: '#D8D0C0',
+          500: '#C47A5A',
+          600: '#B5694E',
+          700: '#A05A42',
+        },
+      },
       boxShadow: {
-        glow: '0 0 0 1px rgba(14, 165, 233, 0.08), 0 20px 50px rgba(2, 6, 23, 0.45)',
+        glow: '0 2px 12px rgba(28,26,23,0.06)',
       },
     },
   },
